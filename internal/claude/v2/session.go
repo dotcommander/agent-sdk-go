@@ -354,6 +354,57 @@ func (s *v2SessionImpl) String() string {
 		status, s.sessionID, s.options.Model)
 }
 
+// Interrupt stops the current query execution.
+func (s *v2SessionImpl) Interrupt(ctx context.Context) error {
+	return fmt.Errorf("Interrupt not implemented")
+}
+
+// SetPermissionMode changes the permission mode.
+func (s *v2SessionImpl) SetPermissionMode(ctx context.Context, mode shared.PermissionMode) error {
+	return fmt.Errorf("SetPermissionMode not implemented")
+}
+
+// SetModel changes the model used.
+func (s *v2SessionImpl) SetModel(ctx context.Context, model string) error {
+	return fmt.Errorf("SetModel not implemented")
+}
+
+// SetMaxThinkingTokens adjusts the thinking token limit.
+// Pass nil to clear the limit.
+func (s *v2SessionImpl) SetMaxThinkingTokens(ctx context.Context, tokens *int) error {
+	return fmt.Errorf("SetMaxThinkingTokens not implemented")
+}
+
+// SupportedCommands returns available slash commands.
+func (s *v2SessionImpl) SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error) {
+	return nil, fmt.Errorf("SupportedCommands not implemented")
+}
+
+// SupportedModels returns available models.
+func (s *v2SessionImpl) SupportedModels(ctx context.Context) ([]shared.ModelInfo, error) {
+	return nil, fmt.Errorf("SupportedModels not implemented")
+}
+
+// McpServerStatus returns MCP server statuses.
+func (s *v2SessionImpl) McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error) {
+	return nil, fmt.Errorf("McpServerStatus not implemented")
+}
+
+// AccountInfo returns account information.
+func (s *v2SessionImpl) AccountInfo(ctx context.Context) (*shared.AccountInfo, error) {
+	return nil, fmt.Errorf("AccountInfo not implemented")
+}
+
+// RewindFiles rewinds files to a specific message state.
+func (s *v2SessionImpl) RewindFiles(ctx context.Context, userMessageID string, opts *RewindFilesOptions) (*shared.RewindFilesResult, error) {
+	return nil, fmt.Errorf("RewindFiles not implemented")
+}
+
+// SetMcpServers dynamically sets MCP servers.
+func (s *v2SessionImpl) SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error) {
+	return nil, fmt.Errorf("SetMcpServers not implemented")
+}
+
 // v2MessageIteratorImpl implements the V2MessageIterator interface.
 type v2MessageIteratorImpl struct {
 	session *v2SessionImpl
