@@ -97,9 +97,6 @@ FLAGS:
     --model <model>      Model to use (default: claude-sonnet-4-5-20250929)
     --timeout <seconds>  Timeout in seconds (default: 60)
 
-ENVIRONMENT:
-    ANTHROPIC_API_KEY    API key for authentication (if required)
-
 NOTES:
     This demo requires the Claude CLI to be installed and available in PATH.
     Install: https://docs.anthropic.com/claude/docs/quickstart#installing-claude
