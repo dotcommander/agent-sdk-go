@@ -25,6 +25,8 @@ func TestNewMessageParserRegistry(t *testing.T) {
 		shared.MessageTypeStreamEvent,
 		shared.MessageTypeControlRequest,
 		shared.MessageTypeControlResponse,
+		shared.MessageTypeToolProgress,
+		shared.MessageTypeAuthStatus,
 	}
 
 	registeredTypes := registry.RegisteredTypes()

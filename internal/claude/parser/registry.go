@@ -86,6 +86,8 @@ func (r *MessageParserRegistry) registerDefaults() {
 	r.Register(shared.MessageTypeStreamEvent, parseStreamEvent)
 	r.Register(shared.MessageTypeControlRequest, parseControlRequest)
 	r.Register(shared.MessageTypeControlResponse, parseControlResponse)
+	r.Register(shared.MessageTypeToolProgress, parseToolProgressMessage)
+	r.Register(shared.MessageTypeAuthStatus, parseAuthStatusMessage)
 }
 
 // Default parser functions
@@ -126,6 +128,52 @@ func parseSystemMessage(jsonStr string, lineNumber int) (shared.Message, error) 
 			var subtype string
 			if err := json.Unmarshal(v, &subtype); err == nil {
 				msg.Subtype = subtype
+			}
+		case "agents":
+			var agents []string
+			if err := json.Unmarshal(v, &agents); err == nil {
+				msg.Agents = agents
+			}
+			// Also store in Data for backward compatibility
+			var data any
+			if err := json.Unmarshal(v, &data); err == nil {
+				msg.Data[k] = data
+			}
+		case "betas":
+			var betas []string
+			if err := json.Unmarshal(v, &betas); err == nil {
+				msg.Betas = betas
+			}
+			var data any
+			if err := json.Unmarshal(v, &data); err == nil {
+				msg.Data[k] = data
+			}
+		case "claudeCodeVersion":
+			var version string
+			if err := json.Unmarshal(v, &version); err == nil {
+				msg.ClaudeCodeVersion = version
+			}
+			var data any
+			if err := json.Unmarshal(v, &data); err == nil {
+				msg.Data[k] = data
+			}
+		case "skills":
+			var skills []string
+			if err := json.Unmarshal(v, &skills); err == nil {
+				msg.Skills = skills
+			}
+			var data any
+			if err := json.Unmarshal(v, &data); err == nil {
+				msg.Data[k] = data
+			}
+		case "plugins":
+			var plugins []shared.PluginInfo
+			if err := json.Unmarshal(v, &plugins); err == nil {
+				msg.Plugins = plugins
+			}
+			var data any
+			if err := json.Unmarshal(v, &data); err == nil {
+				msg.Data[k] = data
 			}
 		default:
 			// All other fields go into Data
@@ -169,6 +217,22 @@ func parseControlResponse(jsonStr string, lineNumber int) (shared.Message, error
 	var msg shared.RawControlMessage
 	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
 		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse ControlResponse: %v", err))
+	}
+	return &msg, nil
+}
+
+func parseToolProgressMessage(jsonStr string, lineNumber int) (shared.Message, error) {
+	var msg shared.ToolProgressMessage
+	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
+		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse ToolProgressMessage: %v", err))
+	}
+	return &msg, nil
+}
+
+func parseAuthStatusMessage(jsonStr string, lineNumber int) (shared.Message, error) {
+	var msg shared.AuthStatusMessage
+	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
+		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse AuthStatusMessage: %v", err))
 	}
 	return &msg, nil
 }
