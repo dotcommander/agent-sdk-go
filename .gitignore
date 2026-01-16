@@ -2,6 +2,9 @@
 demo
 agent-sdk-go
 
+# Reference SDK (not part of project)
+reference-sdk/
+
 # IDE
 .idea/
 .vscode/
