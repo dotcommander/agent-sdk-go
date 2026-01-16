@@ -183,22 +183,29 @@ func (t *Transport) Connect(ctx context.Context) error {
 	t.cmd.Env = t.buildEnv()
 
 	// Set up I/O pipes
-	stdin, err := t.cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("create stdin pipe: %w", err)
+	// Only create stdin pipe for interactive mode - stdin pipe causes issues with one-shot mode
+	if t.promptArg == nil {
+		stdin, err := t.cmd.StdinPipe()
+		if err != nil {
+			return fmt.Errorf("create stdin pipe: %w", err)
+		}
+		t.stdin = stdin
 	}
-	t.stdin = stdin
 
 	stdout, err := t.cmd.StdoutPipe()
 	if err != nil {
-		stdin.Close()
+		if t.stdin != nil {
+			t.stdin.Close()
+		}
 		return fmt.Errorf("create stdout pipe: %w", err)
 	}
 	t.stdout = stdout
 
 	stderr, err := t.cmd.StderrPipe()
 	if err != nil {
-		stdin.Close()
+		if t.stdin != nil {
+			t.stdin.Close()
+		}
 		stdout.Close()
 		return fmt.Errorf("create stderr pipe: %w", err)
 	}
@@ -233,15 +240,13 @@ func (t *Transport) Connect(ctx context.Context) error {
 func (t *Transport) buildArgs() []string {
 	var args []string
 
-	// Base arguments - always include these
-	args = append(args, "--output-format", "stream-json", "--verbose")
-
 	if t.promptArg != nil {
-		// One-shot mode: use --print flag with prompt
-		args = append(args, "--print", *t.promptArg)
+		// One-shot mode: -p flag enables print mode, prompt is positional arg at end
+		// --verbose is required for stream-json output in print mode
+		args = append(args, "-p", "--output-format", "stream-json", "--verbose")
 	} else {
-		// Interactive mode: use input format flag
-		args = append(args, "--input-format", "stream-json")
+		// Interactive mode: use streaming JSON for both input and output
+		args = append(args, "--output-format", "stream-json", "--input-format", "stream-json")
 	}
 
 	// Add model
@@ -254,6 +259,11 @@ func (t *Transport) buildArgs() []string {
 
 	// Add custom args
 	args = append(args, t.customArgs...)
+
+	// In one-shot mode, prompt goes last as positional argument
+	if t.promptArg != nil {
+		args = append(args, *t.promptArg)
+	}
 
 	return args
 }
@@ -276,79 +286,88 @@ func (t *Transport) buildEnv() []string {
 // handleStdout reads and parses messages from stdout.
 func (t *Transport) handleStdout() {
 	defer t.wg.Done()
+	defer func() {
+		// Signal completion when stdout closes (subprocess exit)
+		// This unblocks any goroutines waiting on msgChan
+		t.mu.Lock()
+		if t.connected {
+			close(t.msgChan)
+			close(t.errChan)
+			t.connected = false
+		}
+		t.mu.Unlock()
+	}()
 
 	scanner := bufio.NewScanner(t.stdout)
-	for {
+	for scanner.Scan() {
+		// Check for context cancellation
 		select {
 		case <-t.ctx.Done():
 			return
 		default:
-			if !scanner.Scan() {
-				// Scanner reached EOF or error
-				if err := scanner.Err(); err != nil {
-					select {
-					case t.errChan <- fmt.Errorf("stdout scanner error: %w", err):
-					case <-t.ctx.Done():
-						return
-					}
-				}
-				return
-			}
+		}
 
-			line := scanner.Text()
+		line := scanner.Text()
 
-			// Skip empty lines
-			if line == "" {
-				continue
-			}
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
 
-			// Parse the line as JSON
-			var rawMsg map[string]any
-			if err := json.Unmarshal([]byte(line), &rawMsg); err != nil {
-				select {
-				case t.errChan <- fmt.Errorf("parse JSON: %w", err):
-				case <-t.ctx.Done():
-					return
-				}
-				continue
-			}
-
-			// Discriminate by message type
-			msgType, ok := rawMsg["type"].(string)
-			if !ok {
-				select {
-				case t.errChan <- fmt.Errorf("message missing type field"):
-				case <-t.ctx.Done():
-					return
-				}
-				continue
-			}
-
-			// Parse message using injected registry (OCP compliance)
-			msg, err := t.parserRegistry.Parse(msgType, line, 0)
-			if err != nil {
-				// Check if it's an unknown type - pass as raw
-				if !t.parserRegistry.HasParser(msgType) {
-					msg = &shared.RawControlMessage{
-						MessageType: msgType,
-						Data:        rawMsg,
-					}
-				} else {
-					select {
-					case t.errChan <- err:
-					case <-t.ctx.Done():
-						return
-					}
-					continue
-				}
-			}
-
-			// Send the message
+		// Parse the line as JSON
+		var rawMsg map[string]any
+		if err := json.Unmarshal([]byte(line), &rawMsg); err != nil {
 			select {
-			case t.msgChan <- msg:
+			case t.errChan <- fmt.Errorf("parse JSON: %w", err):
 			case <-t.ctx.Done():
 				return
 			}
+			continue
+		}
+
+		// Discriminate by message type
+		msgType, ok := rawMsg["type"].(string)
+		if !ok {
+			select {
+			case t.errChan <- fmt.Errorf("message missing type field"):
+			case <-t.ctx.Done():
+				return
+			}
+			continue
+		}
+
+		// Parse message using injected registry (OCP compliance)
+		msg, err := t.parserRegistry.Parse(msgType, line, 0)
+		if err != nil {
+			// Check if it's an unknown type - pass as raw
+			if !t.parserRegistry.HasParser(msgType) {
+				msg = &shared.RawControlMessage{
+					MessageType: msgType,
+					Data:        rawMsg,
+				}
+			} else {
+				select {
+				case t.errChan <- err:
+				case <-t.ctx.Done():
+					return
+				}
+				continue
+			}
+		}
+
+		// Send the message
+		select {
+		case t.msgChan <- msg:
+		case <-t.ctx.Done():
+			return
+		}
+	}
+
+	// Check for scanner errors
+	if err := scanner.Err(); err != nil {
+		select {
+		case t.errChan <- fmt.Errorf("stdout scanner error: %w", err):
+		case <-t.ctx.Done():
 		}
 	}
 }
@@ -492,9 +511,8 @@ func (t *Transport) Close() error {
 		_ = t.cmd.Wait()
 	}
 
-	// Close channels
-	close(t.msgChan)
-	close(t.errChan)
+	// Note: channels are closed by handleStdout when it exits
+	// to avoid double-close panic
 
 	return nil
 }
