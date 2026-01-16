@@ -1,0 +1,11 @@
+# Binaries
+demo
+agent-sdk-go
+
+# IDE
+.idea/
+.vscode/
+
+# Coverage
+coverage.out
+coverage.html
