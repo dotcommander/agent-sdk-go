@@ -20,6 +20,18 @@ const (
 
 	// Partial message streaming type
 	MessageTypeStreamEvent = "stream_event"
+
+	// SDK message types (from TypeScript SDK)
+	MessageTypeToolProgress = "tool_progress"
+	MessageTypeAuthStatus   = "auth_status"
+)
+
+// System message subtype constants
+const (
+	SystemSubtypeInit           = "init"
+	SystemSubtypeCompactBoundary = "compact_boundary"
+	SystemSubtypeStatus         = "status"
+	SystemSubtypeHookResponse   = "hook_response"
 )
 
 // Content block type constants
@@ -202,11 +214,28 @@ func (m *AssistantMessage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// PluginInfo contains information about an active plugin.
+type PluginInfo struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
 // SystemMessage represents a system message.
+// When Subtype is "init", the following fields are populated:
+// - Agents: list of active agent names
+// - Betas: list of active beta features
+// - ClaudeCodeVersion: version string of Claude Code
+// - Skills: list of active skills
+// - Plugins: list of active plugins
 type SystemMessage struct {
-	MessageType string         `json:"type"`
-	Subtype     string         `json:"subtype"`
-	Data        map[string]any `json:"-"` // Preserve all original data
+	MessageType      string         `json:"type"`
+	Subtype          string         `json:"subtype"`
+	Data             map[string]any `json:"-"` // Preserve all original data
+	Agents           []string       `json:"-"` // Populated when subtype is "init"
+	Betas            []string       `json:"-"` // Populated when subtype is "init"
+	ClaudeCodeVersion string        `json:"-"` // Populated when subtype is "init"
+	Skills           []string       `json:"-"` // Populated when subtype is "init"
+	Plugins          []PluginInfo   `json:"-"` // Populated when subtype is "init"
 }
 
 // Type returns the message type for SystemMessage.
@@ -224,18 +253,27 @@ func (m *SystemMessage) MarshalJSON() ([]byte, error) {
 }
 
 // ResultMessage represents the final result of a conversation turn.
+// The Subtype field indicates the result status:
+// - "success": normal completion
+// - "error_during_execution": error occurred during execution
+// - "error_max_turns": maximum turns reached
+// - "error_max_budget_usd": budget limit exceeded
+// - "error_max_structured_output_retries": structured output retry limit exceeded
 type ResultMessage struct {
-	MessageType      string          `json:"type"`
-	Subtype          string          `json:"subtype"`
-	DurationMs       int             `json:"duration_ms"`
-	DurationAPIMs    int             `json:"duration_api_ms"`
-	IsError          bool            `json:"is_error"`
-	NumTurns         int             `json:"num_turns"`
-	SessionID        string          `json:"session_id"`
-	TotalCostUSD     *float64        `json:"total_cost_usd,omitempty"`
-	Usage            *map[string]any `json:"usage,omitempty"`
-	Result           *string         `json:"result,omitempty"`
-	StructuredOutput any             `json:"structured_output,omitempty"`
+	MessageType       string                 `json:"type"`
+	Subtype           string                 `json:"subtype"`
+	DurationMs        int                    `json:"duration_ms"`
+	DurationAPIMs     int                    `json:"duration_api_ms"`
+	IsError           bool                   `json:"is_error"`
+	NumTurns          int                    `json:"num_turns"`
+	SessionID         string                 `json:"session_id"`
+	TotalCostUSD      *float64               `json:"total_cost_usd,omitempty"`
+	Usage             *map[string]any        `json:"usage,omitempty"`
+	Result            *string                `json:"result,omitempty"`
+	StructuredOutput  any                    `json:"structured_output,omitempty"`
+	ModelUsage        map[string]ModelUsage  `json:"modelUsage,omitempty"`
+	PermissionDenials []SDKPermissionDenial  `json:"permission_denials,omitempty"`
+	Errors            []string               `json:"errors,omitempty"` // for error subtypes
 }
 
 // Type returns the message type for ResultMessage.
@@ -421,6 +459,163 @@ func (m *StreamEvent) MarshalJSON() ([]byte, error) {
 	}{
 		Type:        MessageTypeStreamEvent,
 		streamEvent: (*streamEvent)(m),
+	}
+	return json.Marshal(temp)
+}
+
+// CompactMetadata contains metadata about conversation compaction.
+type CompactMetadata struct {
+	Trigger   string `json:"trigger"` // "manual" | "auto"
+	PreTokens int    `json:"pre_tokens"`
+}
+
+// CompactBoundaryMessage represents a conversation compaction boundary.
+// This is a system message with subtype "compact_boundary".
+type CompactBoundaryMessage struct {
+	MessageType     string           `json:"type"`    // always "system"
+	Subtype         string           `json:"subtype"` // always "compact_boundary"
+	CompactMetadata *CompactMetadata `json:"compact_metadata,omitempty"`
+	UUID            string           `json:"uuid"`
+	SessionID       string           `json:"session_id"`
+}
+
+// Type returns the message type for CompactBoundaryMessage.
+func (m *CompactBoundaryMessage) Type() string {
+	return MessageTypeSystem
+}
+
+// MarshalJSON implements custom JSON marshaling for CompactBoundaryMessage
+func (m *CompactBoundaryMessage) MarshalJSON() ([]byte, error) {
+	type compactBoundaryMessage CompactBoundaryMessage
+	temp := struct {
+		Type    string `json:"type"`
+		Subtype string `json:"subtype"`
+		*compactBoundaryMessage
+	}{
+		Type:                   MessageTypeSystem,
+		Subtype:                SystemSubtypeCompactBoundary,
+		compactBoundaryMessage: (*compactBoundaryMessage)(m),
+	}
+	return json.Marshal(temp)
+}
+
+// ToolProgressMessage represents tool execution progress.
+type ToolProgressMessage struct {
+	MessageType        string  `json:"type"` // always "tool_progress"
+	ToolUseID          string  `json:"tool_use_id"`
+	ToolName           string  `json:"tool_name"`
+	ParentToolUseID    *string `json:"parent_tool_use_id,omitempty"`
+	ElapsedTimeSeconds float64 `json:"elapsed_time_seconds"`
+	UUID               string  `json:"uuid"`
+	SessionID          string  `json:"session_id"`
+}
+
+// Type returns the message type for ToolProgressMessage.
+func (m *ToolProgressMessage) Type() string {
+	return MessageTypeToolProgress
+}
+
+// MarshalJSON implements custom JSON marshaling for ToolProgressMessage
+func (m *ToolProgressMessage) MarshalJSON() ([]byte, error) {
+	type toolProgressMessage ToolProgressMessage
+	temp := struct {
+		Type string `json:"type"`
+		*toolProgressMessage
+	}{
+		Type:                MessageTypeToolProgress,
+		toolProgressMessage: (*toolProgressMessage)(m),
+	}
+	return json.Marshal(temp)
+}
+
+// StatusMessage represents a system status update.
+// This is a system message with subtype "status".
+type StatusMessage struct {
+	MessageType string  `json:"type"`    // always "system"
+	Subtype     string  `json:"subtype"` // always "status"
+	Status      *string `json:"status"`  // "compacting" | null
+	UUID        string  `json:"uuid"`
+	SessionID   string  `json:"session_id"`
+}
+
+// Type returns the message type for StatusMessage.
+func (m *StatusMessage) Type() string {
+	return MessageTypeSystem
+}
+
+// MarshalJSON implements custom JSON marshaling for StatusMessage
+func (m *StatusMessage) MarshalJSON() ([]byte, error) {
+	type statusMessage StatusMessage
+	temp := struct {
+		Type    string `json:"type"`
+		Subtype string `json:"subtype"`
+		*statusMessage
+	}{
+		Type:          MessageTypeSystem,
+		Subtype:       SystemSubtypeStatus,
+		statusMessage: (*statusMessage)(m),
+	}
+	return json.Marshal(temp)
+}
+
+// AuthStatusMessage represents authentication status.
+type AuthStatusMessage struct {
+	MessageType      string   `json:"type"` // always "auth_status"
+	IsAuthenticating bool     `json:"isAuthenticating"`
+	Output           []string `json:"output"`
+	Error            *string  `json:"error,omitempty"`
+	UUID             string   `json:"uuid"`
+	SessionID        string   `json:"session_id"`
+}
+
+// Type returns the message type for AuthStatusMessage.
+func (m *AuthStatusMessage) Type() string {
+	return MessageTypeAuthStatus
+}
+
+// MarshalJSON implements custom JSON marshaling for AuthStatusMessage
+func (m *AuthStatusMessage) MarshalJSON() ([]byte, error) {
+	type authStatusMessage AuthStatusMessage
+	temp := struct {
+		Type string `json:"type"`
+		*authStatusMessage
+	}{
+		Type:              MessageTypeAuthStatus,
+		authStatusMessage: (*authStatusMessage)(m),
+	}
+	return json.Marshal(temp)
+}
+
+// HookResponseMessage represents hook execution response.
+// This is a system message with subtype "hook_response".
+type HookResponseMessage struct {
+	MessageType string  `json:"type"`      // always "system"
+	Subtype     string  `json:"subtype"`   // always "hook_response"
+	HookName    string  `json:"hook_name"`
+	HookEvent   string  `json:"hook_event"`
+	Stdout      string  `json:"stdout"`
+	Stderr      string  `json:"stderr"`
+	ExitCode    *int    `json:"exit_code,omitempty"`
+	UUID        string  `json:"uuid"`
+	SessionID   string  `json:"session_id"`
+}
+
+// Type returns the message type for HookResponseMessage.
+func (m *HookResponseMessage) Type() string {
+	return MessageTypeSystem
+}
+
+// MarshalJSON implements custom JSON marshaling for HookResponseMessage
+func (m *HookResponseMessage) MarshalJSON() ([]byte, error) {
+	type hookResponseMessage HookResponseMessage
+	temp := struct {
+		Type    string `json:"type"`
+		Subtype string `json:"subtype"`
+		*hookResponseMessage
+	}{
+		Type:                MessageTypeSystem,
+		Subtype:             SystemSubtypeHookResponse,
+		hookResponseMessage: (*hookResponseMessage)(m),
 	}
 	return json.Marshal(temp)
 }
