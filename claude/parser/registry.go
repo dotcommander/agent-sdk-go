@@ -101,8 +101,22 @@ func parseUserMessage(jsonStr string, lineNumber int) (shared.Message, error) {
 }
 
 func parseAssistantMessage(jsonStr string, lineNumber int) (shared.Message, error) {
+	// Claude CLI wraps the message in a "message" field, extract it first
+	var wrapper struct {
+		Message json.RawMessage `json:"message"`
+	}
+	if err := json.Unmarshal([]byte(jsonStr), &wrapper); err != nil {
+		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse AssistantMessage wrapper: %v", err))
+	}
+
+	// Use the nested message if present, otherwise use the root
+	msgData := wrapper.Message
+	if msgData == nil {
+		msgData = []byte(jsonStr)
+	}
+
 	var msg shared.AssistantMessage
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
+	if err := json.Unmarshal(msgData, &msg); err != nil {
 		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse AssistantMessage: %v", err))
 	}
 	return &msg, nil

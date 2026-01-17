@@ -133,9 +133,10 @@ func isValidEnvVar(k, v string) bool {
 }
 
 // isValidPrompt checks if a prompt string is safe to use as a CLI argument.
+// Note: exec.Command properly escapes arguments, so most characters are safe.
+// We only block null bytes which could cause issues.
 func isValidPrompt(prompt string) bool {
-	// Prompt must not contain shell escape characters
-	return !strings.ContainsAny(prompt, "`$!;&|<>")
+	return !strings.ContainsAny(prompt, "\x00")
 }
 
 // Transport represents a subprocess transport for communicating with Claude CLI.
@@ -282,6 +283,18 @@ func (t *Transport) Connect(ctx context.Context) error {
 		// Set environment
 		t.cmd.Env = t.buildEnv()
 
+		// Debug: log command and relevant env vars to file
+		if debugFile, err := os.OpenFile("/tmp/sdk-debug.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+			fmt.Fprintf(debugFile, "\n=== %s ===\n", time.Now().Format(time.RFC3339))
+			fmt.Fprintf(debugFile, "command: %s %v\n", cliPath, args)
+			for _, e := range t.cmd.Env {
+				if strings.HasPrefix(e, "ANTHROPIC_") || strings.HasPrefix(e, "SYNTHETIC_") || strings.HasPrefix(e, "ZAI_") {
+					fmt.Fprintf(debugFile, "env: %s\n", e)
+				}
+			}
+			debugFile.Close()
+		}
+
 		// Set up I/O pipes
 		// Only create stdin pipe for interactive mode - stdin pipe causes issues with one-shot mode
 		if t.promptArg == nil {
@@ -420,6 +433,8 @@ func (t *Transport) handleStdout() {
 	}()
 
 	scanner := bufio.NewScanner(t.stdout)
+	// Increase buffer size to handle large JSON responses (default 64KB is often insufficient)
+	scanner.Buffer(make([]byte, 1024*1024), 10*1024*1024) // 1MB initial, 10MB max
 	for scanner.Scan() {
 		// Check for context cancellation
 		select {
@@ -433,6 +448,12 @@ func (t *Transport) handleStdout() {
 		// Skip empty lines
 		if line == "" {
 			continue
+		}
+
+		// Debug: log raw response line to file
+		if debugFile, err := os.OpenFile("/tmp/sdk-debug.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+			fmt.Fprintf(debugFile, "response: %s\n", line)
+			debugFile.Close()
 		}
 
 		// Parse the line as JSON
