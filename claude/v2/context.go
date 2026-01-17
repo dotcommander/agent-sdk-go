@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // withSessionCleanup is an internal helper that sets up context-based session cleanup.

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

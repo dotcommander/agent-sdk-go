@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // Parser handles JSON message parsing with type discrimination.

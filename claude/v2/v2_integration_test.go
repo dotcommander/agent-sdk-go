@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"agent-sdk-go/claude/cli"
+	"github.com/dotcommander/agent-sdk-go/claude/cli"
 )
 
 func TestV2Prompt(t *testing.T) {

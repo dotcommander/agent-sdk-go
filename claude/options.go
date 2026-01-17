@@ -1,7 +1,7 @@
 package claude
 
 import (
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // DefaultClientOptions returns default options for the Claude client.

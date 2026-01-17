@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"agent-sdk-go/claude/shared"
-	"agent-sdk-go/claude/subprocess"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/subprocess"
 )
 
 // ClientImpl implements the Client interface using subprocess transport.

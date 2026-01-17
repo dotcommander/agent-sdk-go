@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // SessionOption is a function that configures a V2SessionOptions.

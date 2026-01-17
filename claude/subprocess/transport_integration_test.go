@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"agent-sdk-go/claude/parser"
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/parser"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 func TestTransportEnvironmentValidation(t *testing.T) {

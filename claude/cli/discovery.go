@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // DiscoveryResult contains information about the discovered Claude CLI.

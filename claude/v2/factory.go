@@ -1,8 +1,8 @@
 package v2
 
 import (
-	"agent-sdk-go/claude"
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // ClientFactory creates claude.Client instances.

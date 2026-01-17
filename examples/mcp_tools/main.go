@@ -11,9 +11,9 @@ import (
 	"log"
 	"math"
 
-	"agent-sdk-go/claude"
-	"agent-sdk-go/claude/mcp"
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
+	"github.com/dotcommander/agent-sdk-go/claude/mcp"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 func main() {

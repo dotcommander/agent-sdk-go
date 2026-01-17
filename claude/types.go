@@ -2,8 +2,8 @@ package claude
 
 import (
 	"context"
-	"agent-sdk-go/claude/parser"
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/parser"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // ClientOption is a function type for configuring the client.

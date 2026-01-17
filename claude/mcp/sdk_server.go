@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // SdkMcpTool represents a tool that can be provided to Claude.
