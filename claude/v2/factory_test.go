@@ -54,6 +54,28 @@ func (m *MockClient) ReceiveResponse(ctx context.Context) (claude.Message, error
 	return nil, nil
 }
 
+func (m *MockClient) ReceiveResponseIterator(ctx context.Context) claude.MessageIterator {
+	return &mockIterator{}
+}
+
+// mockIterator is a simple mock implementation of MessageIterator for testing.
+type mockIterator struct {
+	closed bool
+}
+
+func (i *mockIterator) Next(ctx context.Context) (shared.Message, error) {
+	if i.closed {
+		return nil, claude.ErrNoMoreMessages
+	}
+	i.closed = true
+	return nil, claude.ErrNoMoreMessages
+}
+
+func (i *mockIterator) Close() error {
+	i.closed = true
+	return nil
+}
+
 func (m *MockClient) Interrupt() error {
 	return nil
 }
