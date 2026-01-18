@@ -411,6 +411,22 @@ type BaseOptions struct {
 	// Env contains environment variables to set for the subprocess.
 	Env map[string]string
 
+	// Cwd sets the working directory for the subprocess.
+	// If empty, inherits parent process working directory.
+	Cwd string
+
+	// Tools configures tool availability.
+	// Can be a preset ("claude_code") or explicit tool list.
+	Tools *ToolsConfig
+
+	// Stderr is a callback invoked for each stderr line from subprocess.
+	// If nil, stderr goes to parent process stderr.
+	Stderr func(line string)
+
+	// CanUseTool is a callback for runtime permission checks.
+	// Invoked before each tool use when permission mode requires it.
+	CanUseTool CanUseToolCallback
+
 	// Continue continues the most recent conversation.
 	Continue bool
 
@@ -483,6 +499,23 @@ type BaseOptions struct {
 
 	// ExtraArgs are additional CLI arguments.
 	ExtraArgs map[string]string
+}
+
+// ToolsConfig is a discriminated union for tool configuration.
+type ToolsConfig struct {
+	Type   string   // "preset" | "explicit"
+	Preset string   // "claude_code" (when Type == "preset")
+	Tools  []string // Tool names (when Type == "explicit")
+}
+
+// ToolsPreset creates a tools config for a preset.
+func ToolsPreset(preset string) *ToolsConfig {
+	return &ToolsConfig{Type: "preset", Preset: preset}
+}
+
+// ToolsExplicit creates a tools config for explicit tool list.
+func ToolsExplicit(tools ...string) *ToolsConfig {
+	return &ToolsConfig{Type: "explicit", Tools: tools}
 }
 
 // DefaultBaseOptions returns default base options.
@@ -660,6 +693,34 @@ func WithBaseMcpServers(servers map[string]McpServerConfig) BaseOptionFunc {
 func WithBaseExtraArgs(args map[string]string) BaseOptionFunc {
 	return func(o *BaseOptions) {
 		o.ExtraArgs = args
+	}
+}
+
+// WithBaseCwd sets the working directory for the subprocess.
+func WithBaseCwd(cwd string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.Cwd = cwd
+	}
+}
+
+// WithBaseTools sets the tools configuration.
+func WithBaseTools(tools *ToolsConfig) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.Tools = tools
+	}
+}
+
+// WithBaseStderr sets the stderr callback.
+func WithBaseStderr(callback func(line string)) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.Stderr = callback
+	}
+}
+
+// WithBaseCanUseTool sets the permission callback.
+func WithBaseCanUseTool(callback CanUseToolCallback) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.CanUseTool = callback
 	}
 }
 

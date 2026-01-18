@@ -1,5 +1,7 @@
 package shared
 
+import "context"
+
 // PermissionMode controls how tool executions are handled.
 type PermissionMode string
 
@@ -68,3 +70,20 @@ type CanUseToolOptions struct {
 	ToolUseID      string             `json:"toolUseID"`
 	AgentID        string             `json:"agentID,omitempty"`
 }
+
+// CanUseToolCallback is invoked before tool execution for permission checks.
+// Returns PermissionResult indicating whether to allow/deny the tool use.
+//
+// The callback can:
+//   - Approve: Return PermissionResult{Behavior: "allow"}
+//   - Deny: Return PermissionResult{Behavior: "deny", Message: "reason"}
+//   - Modify input: Set UpdatedInput field
+//   - Suggest permission updates: Set UpdatedPermissions field
+//
+// Context may be cancelled if session times out.
+type CanUseToolCallback func(
+	ctx context.Context,
+	toolName string,
+	toolInput map[string]any,
+	opts CanUseToolOptions,
+) (PermissionResult, error)
