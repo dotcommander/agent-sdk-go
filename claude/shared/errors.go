@@ -11,6 +11,13 @@ import (
 	"strings"
 )
 
+// SDKError is the base interface for all Claude Agent SDK errors.
+// It provides a Type() method for programmatic error type discrimination.
+type SDKError interface {
+	error
+	Type() string
+}
+
 // BaseError provides common error functionality that can be embedded
 // in domain-specific error types. It handles reason and inner error
 // formatting consistently.
@@ -75,11 +82,7 @@ func (eb *ErrorBuilder) Field(name string, value string, quoted bool) *ErrorBuil
 // IntField adds a named integer field to the error message.
 func (eb *ErrorBuilder) IntField(name string, value int) *ErrorBuilder {
 	if value != 0 {
-		eb.b.WriteString(" (")
-		eb.b.WriteString(name)
-		eb.b.WriteString("=")
-		eb.b.WriteString(fmt.Sprintf("%d", value))
-		eb.b.WriteString(")")
+		fmt.Fprintf(&eb.b, " (%s=%d)", name, value)
 	}
 	return eb
 }
@@ -144,6 +147,9 @@ func (e *CLINotFoundError) innerError() error {
 	return errors.New("no such file or directory")
 }
 
+// Type returns the error type for SDKError compliance.
+func (e *CLINotFoundError) Type() string { return "cli_not_found" }
+
 // IsCLINotFound checks if an error is a CLINotFoundError.
 func IsCLINotFound(err error) bool {
 	_, ok := err.(*CLINotFoundError)
@@ -187,6 +193,9 @@ func (e *ConnectionError) Error() string {
 	return b.String()
 }
 
+// Type returns the error type for SDKError compliance.
+func (e *ConnectionError) Type() string { return "connection" }
+
 // NewConnectionError creates a new ConnectionError.
 func NewConnectionError(reason string, inner error) *ConnectionError {
 	return &ConnectionError{
@@ -210,6 +219,9 @@ func (e *TimeoutError) Error() string {
 	return b.String()
 }
 
+// Type returns the error type for SDKError compliance.
+func (e *TimeoutError) Type() string { return "timeout" }
+
 // NewTimeoutError creates a new TimeoutError.
 func NewTimeoutError(operation, timeout string) *TimeoutError {
 	return &TimeoutError{
@@ -232,9 +244,9 @@ func (e *ParserError) Error() string {
 	b.WriteString("failed to parse JSON")
 	e.FormatReason(&b)
 	if e.Line > 0 {
-		b.WriteString(fmt.Sprintf(" (line %d", e.Line))
+		fmt.Fprintf(&b, " (line %d", e.Line)
 		if e.Offset > 0 {
-			b.WriteString(fmt.Sprintf(", offset %d", e.Offset))
+			fmt.Fprintf(&b, ", offset %d", e.Offset)
 		}
 		b.WriteString(")")
 	}
@@ -244,10 +256,13 @@ func (e *ParserError) Error() string {
 		if len(data) > 100 {
 			data = data[:100] + "..."
 		}
-		b.WriteString(fmt.Sprintf(": %q", data))
+		fmt.Fprintf(&b, ": %q", data)
 	}
 	return b.String()
 }
+
+// Type returns the error type for SDKError compliance.
+func (e *ParserError) Type() string { return "parser" }
 
 // NewParserError creates a new ParserError.
 func NewParserError(line, offset int, data, reason string) *ParserError {
@@ -270,11 +285,14 @@ func (e *ProtocolError) Error() string {
 	var b strings.Builder
 	b.WriteString("protocol error")
 	if e.MessageType != "" {
-		b.WriteString(fmt.Sprintf(" (type=%q)", e.MessageType))
+		fmt.Fprintf(&b, " (type=%q)", e.MessageType)
 	}
 	e.FormatReason(&b)
 	return b.String()
 }
+
+// Type returns the error type for SDKError compliance.
+func (e *ProtocolError) Type() string { return "protocol" }
 
 // NewProtocolError creates a new ProtocolError.
 func NewProtocolError(messageType, reason string) *ProtocolError {
@@ -296,15 +314,18 @@ func (e *ConfigurationError) Error() string {
 	var b strings.Builder
 	b.WriteString("invalid configuration")
 	if e.Field != "" {
-		b.WriteString(fmt.Sprintf(" (field=%q", e.Field))
+		fmt.Fprintf(&b, " (field=%q", e.Field)
 		if e.Value != "" {
-			b.WriteString(fmt.Sprintf(", value=%q", e.Value))
+			fmt.Fprintf(&b, ", value=%q", e.Value)
 		}
 		b.WriteString(")")
 	}
 	e.FormatReason(&b)
 	return b.String()
 }
+
+// Type returns the error type for SDKError compliance.
+func (e *ConfigurationError) Type() string { return "configuration" }
 
 // NewConfigurationError creates a new ConfigurationError.
 func NewConfigurationError(field, value, reason string) *ConfigurationError {
@@ -326,16 +347,19 @@ type ProcessError struct {
 // Error returns a descriptive error message for ProcessError.
 func (e *ProcessError) Error() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("process %d failed", e.PID))
+	fmt.Fprintf(&b, "process %d failed", e.PID)
 	e.FormatReason(&b)
 	if e.Command != "" {
-		b.WriteString(fmt.Sprintf(" (command=%q)", e.Command))
+		fmt.Fprintf(&b, " (command=%q)", e.Command)
 	}
 	if e.Signal != "" {
-		b.WriteString(fmt.Sprintf(" (signal=%s)", e.Signal))
+		fmt.Fprintf(&b, " (signal=%s)", e.Signal)
 	}
 	return b.String()
 }
+
+// Type returns the error type for SDKError compliance.
+func (e *ProcessError) Type() string { return "process" }
 
 // NewProcessError creates a new ProcessError.
 func NewProcessError(pid int, command, reason, signal string) *ProcessError {
@@ -344,6 +368,75 @@ func NewProcessError(pid int, command, reason, signal string) *ProcessError {
 		PID:       pid,
 		Command:   command,
 		Signal:    signal,
+	}
+}
+
+// JSONDecodeError represents JSON parsing failures.
+// This is an alias/wrapper for richer JSON error information
+// compared to ParserError (which is for general parsing).
+type JSONDecodeError struct {
+	BaseError
+	Line          int   // Line number where parsing failed
+	Position      int   // Character position within the line
+	OriginalError error // The underlying JSON decoder error
+}
+
+// Error returns a descriptive error message for JSONDecodeError.
+func (e *JSONDecodeError) Error() string {
+	return NewErrorBuilder("json decode error").
+		IntField("line", e.Line).
+		IntField("position", e.Position).
+		Reason(&e.BaseError).
+		Inner(&e.BaseError).
+		String()
+}
+
+// Type returns the error type for SDKError compliance.
+func (e *JSONDecodeError) Type() string { return "json_decode" }
+
+// Unwrap returns the inner error for error chaining.
+func (e *JSONDecodeError) Unwrap() error {
+	if e.OriginalError != nil {
+		return e.OriginalError
+	}
+	return e.BaseError.Unwrap()
+}
+
+// NewJSONDecodeError creates a new JSONDecodeError.
+func NewJSONDecodeError(line, position int, reason string, originalErr error) *JSONDecodeError {
+	return &JSONDecodeError{
+		BaseError:     BaseError{Reason: reason, Inner: originalErr},
+		Line:          line,
+		Position:      position,
+		OriginalError: originalErr,
+	}
+}
+
+// MessageParseError represents message structure parsing failures.
+// This is for higher-level message format issues rather than JSON syntax.
+type MessageParseError struct {
+	BaseError
+	Data        any    // The data that failed to parse
+	MessageType string // Expected message type (if known)
+}
+
+// Error returns a descriptive error message for MessageParseError.
+func (e *MessageParseError) Error() string {
+	return NewErrorBuilder("message parse error").
+		Field("type", e.MessageType, true).
+		Reason(&e.BaseError).
+		String()
+}
+
+// Type returns the error type for SDKError compliance.
+func (e *MessageParseError) Type() string { return "message_parse" }
+
+// NewMessageParseError creates a new MessageParseError.
+func NewMessageParseError(data any, messageType, reason string) *MessageParseError {
+	return &MessageParseError{
+		BaseError:   BaseError{Reason: reason},
+		Data:        data,
+		MessageType: messageType,
 	}
 }
 
@@ -459,6 +552,38 @@ func AsConfigurationError(err error) (*ConfigurationError, bool) {
 // Returns the error and true if found, nil and false otherwise.
 func AsProcessError(err error) (*ProcessError, bool) {
 	var target *ProcessError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// IsJSONDecodeError checks if an error is a JSONDecodeError.
+func IsJSONDecodeError(err error) bool {
+	_, ok := err.(*JSONDecodeError)
+	return ok
+}
+
+// AsJSONDecodeError extracts a JSONDecodeError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsJSONDecodeError(err error) (*JSONDecodeError, bool) {
+	var target *JSONDecodeError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// IsMessageParseError checks if an error is a MessageParseError.
+func IsMessageParseError(err error) bool {
+	_, ok := err.(*MessageParseError)
+	return ok
+}
+
+// AsMessageParseError extracts a MessageParseError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsMessageParseError(err error) (*MessageParseError, bool) {
+	var target *MessageParseError
 	if errors.As(err, &target) {
 		return target, true
 	}
