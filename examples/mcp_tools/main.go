@@ -1,8 +1,8 @@
 // Package main demonstrates SDK MCP tool functionality for agent-sdk-go.
 // This example shows how to create custom in-process MCP tools and use them with Claude.
 //
-// Note: This is a CLI wrapper, not an HTTP client SDK. The MCP tools run in-process
-// in the Go application and are passed to Claude CLI via --mcp-config flag.
+// The SDK communicates with Claude CLI via subprocess. MCP tools run in-process
+// within your Go application and are passed to Claude CLI via --mcp-config flag.
 package main
 
 import (
@@ -127,7 +127,7 @@ func main() {
 		fmt.Printf("Retrieved %d server statuses\n", len(status))
 	}
 
-	// Note: In the actual CLI wrapper, MCP tools are passed to Claude CLI via --mcp-config
+	// Note: MCP tools are passed to Claude CLI via --mcp-config flag
 	// The SDK MCP server instance runs in-process and handles tool execution locally
 	// When Claude CLI requests tool execution, it's routed back to the in-process server
 
