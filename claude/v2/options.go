@@ -2,6 +2,8 @@ package v2
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -86,9 +88,26 @@ func WithPromptTimeout(timeout time.Duration) PromptOption {
 }
 
 // WithSystemPrompt sets the system prompt for sessions.
+// This replaces any existing system prompt.
 func WithSystemPrompt(prompt string) SessionOption {
 	return func(opts *V2SessionOptions) {
 		opts.SystemPrompt = prompt
+	}
+}
+
+// WithAppendSystemPrompt appends to the system prompt.
+// Useful for adding domain-specific instructions to the base prompt.
+// Order matters: use WithSystemPrompt first, then WithAppendSystemPrompt.
+//
+// Example:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithSystemPrompt("You are a Go expert."),
+//	    v2.WithAppendSystemPrompt("Always use idiomatic Go patterns."),
+//	)
+func WithAppendSystemPrompt(prompt string) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.AppendSystemPrompt = prompt
 	}
 }
 
@@ -96,6 +115,13 @@ func WithSystemPrompt(prompt string) SessionOption {
 func WithPromptSystemPrompt(prompt string) PromptOption {
 	return func(opts *PromptOptions) {
 		opts.SystemPrompt = prompt
+	}
+}
+
+// WithPromptAppendSystemPrompt appends to the system prompt for a one-shot prompt.
+func WithPromptAppendSystemPrompt(prompt string) PromptOption {
+	return func(opts *PromptOptions) {
+		opts.AppendSystemPrompt = prompt
 	}
 }
 
@@ -661,4 +687,52 @@ func WithPromptCanUseTool(callback shared.CanUseToolCallback) PromptOption {
 	return func(opts *PromptOptions) {
 		opts.CanUseTool = callback
 	}
+}
+
+// =============================================================================
+// Debug Writer Options (P2)
+// =============================================================================
+
+// WithDebugWriter sets the writer for CLI debug output.
+// If not set, stderr is isolated to prevent deadlocks (default behavior).
+// Common values: os.Stderr, io.Discard, or a custom io.Writer like bytes.Buffer.
+//
+// Example:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithDebugWriter(os.Stderr), // See debug output in terminal
+//	)
+func WithDebugWriter(w io.Writer) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.DebugWriter = w
+	}
+}
+
+// WithDebugStderr redirects CLI debug output to os.Stderr.
+// Useful for seeing debug output in real-time during development.
+func WithDebugStderr() SessionOption {
+	return WithDebugWriter(os.Stderr)
+}
+
+// WithDebugDisabled discards all CLI debug output.
+// This is more explicit than nil but has the same effect.
+func WithDebugDisabled() SessionOption {
+	return WithDebugWriter(io.Discard)
+}
+
+// WithPromptDebugWriter sets the writer for CLI debug output in one-shot prompts.
+func WithPromptDebugWriter(w io.Writer) PromptOption {
+	return func(opts *PromptOptions) {
+		opts.DebugWriter = w
+	}
+}
+
+// WithPromptDebugStderr redirects CLI debug output to os.Stderr for one-shot prompts.
+func WithPromptDebugStderr() PromptOption {
+	return WithPromptDebugWriter(os.Stderr)
+}
+
+// WithPromptDebugDisabled discards CLI debug output for one-shot prompts.
+func WithPromptDebugDisabled() PromptOption {
+	return WithPromptDebugWriter(io.Discard)
 }
