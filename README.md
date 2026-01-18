@@ -152,8 +152,9 @@ agent-sdk-go/
 │   ├── v2/                 # V2 session API
 │   ├── cli/                # CLI discovery
 │   └── mcp/                # MCP server support
+├── agent/                  # Agent executor interface
 ├── docs/                   # Documentation
-└── examples/               # Usage examples
+└── examples/               # 21 usage examples
 ```
 
 ## Requirements
