@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -136,16 +137,17 @@ func isValidEnvVar(k, v string) bool {
 // Note: exec.Command properly escapes arguments, so most characters are safe.
 // We only block null bytes which could cause issues.
 func isValidPrompt(prompt string) bool {
-	return !strings.ContainsAny(prompt, "\x00")
+	// Prompt must not contain shell escape characters or null bytes
+	return !strings.ContainsAny(prompt, "`$!;&|<>\x00")
 }
 
 // Transport represents a subprocess transport for communicating with Claude CLI.
 type Transport struct {
 	// Process management
-	cmd       *exec.Cmd
-	cliPath   string
+	cmd        *exec.Cmd
+	cliPath    string
 	cliCommand string
-	promptArg *string // nil = interactive mode, set = one-shot mode
+	promptArg  *string // nil = interactive mode, set = one-shot mode
 
 	// Connection state
 	connected bool
@@ -157,12 +159,16 @@ type Transport struct {
 	stderr io.ReadCloser
 
 	// Configuration
-	timeout      time.Duration
-	model        string
-	systemPrompt string
-	customArgs   []string
-	env          map[string]string
-	mcpServers   map[string]shared.McpServerConfig
+	timeout        time.Duration
+	model          string
+	systemPrompt   string
+	customArgs     []string
+	env            map[string]string
+	cwd            string
+	tools          *shared.ToolsConfig
+	stderrCallback func(line string)
+	canUseTool     shared.CanUseToolCallback
+	mcpServers     map[string]shared.McpServerConfig
 
 	// Parser registry for message type handling (OCP compliance - inject instead of switch)
 	parserRegistry *parser.MessageParserRegistry
@@ -193,6 +199,16 @@ type TransportConfig struct {
 	CustomArgs []string
 	// Env are environment variables to set for the subprocess.
 	Env map[string]string
+	// Cwd is the working directory for the subprocess.
+	// If empty, inherits parent process working directory.
+	Cwd string
+	// Tools configures tool availability (preset or explicit list).
+	Tools *shared.ToolsConfig
+	// StderrCallback is invoked for each stderr line from subprocess.
+	// If nil, stderr goes to parent process stderr.
+	StderrCallback func(line string)
+	// CanUseTool is the callback for runtime permission checks.
+	CanUseTool shared.CanUseToolCallback
 	// PromptArg is the prompt for one-shot mode. If set, transport operates in one-shot mode.
 	PromptArg *string
 	// ParserRegistry is the registry for message type parsers (OCP compliance).
@@ -233,6 +249,10 @@ func createTransport(config *TransportConfig, promptArg *string) (*Transport, er
 		systemPrompt:   config.SystemPrompt,
 		customArgs:     config.CustomArgs,
 		env:            config.Env,
+		cwd:            config.Cwd,
+		tools:          config.Tools,
+		stderrCallback: config.StderrCallback,
+		canUseTool:     config.CanUseTool,
 		mcpServers:     config.McpServers,
 		promptArg:      promptArg,
 		parserRegistry: registry,
@@ -276,9 +296,33 @@ func (t *Transport) Connect(ctx context.Context) error {
 			cliPath = result.Path
 		}
 
+		// Validate and set working directory if specified
+		if t.cwd != "" {
+			// Ensure path is absolute
+			if !filepath.IsAbs(t.cwd) {
+				return fmt.Errorf("cwd must be an absolute path: %s", t.cwd)
+			}
+			// Verify directory exists
+			info, err := os.Stat(t.cwd)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return fmt.Errorf("cwd directory does not exist: %s", t.cwd)
+				}
+				return fmt.Errorf("cwd stat error: %w", err)
+			}
+			if !info.IsDir() {
+				return fmt.Errorf("cwd is not a directory: %s", t.cwd)
+			}
+		}
+
 		// Build command arguments
 		args := t.buildArgs()
 		t.cmd = exec.CommandContext(ctx, cliPath, args...)
+
+		// Set working directory if specified
+		if t.cwd != "" {
+			t.cmd.Dir = t.cwd
+		}
 
 		// Set environment
 		t.cmd.Env = t.buildEnv()
@@ -373,6 +417,22 @@ func (t *Transport) buildArgs() []string {
 
 	// Add custom args
 	args = append(args, t.customArgs...)
+
+	// Add tools configuration
+	if t.tools != nil {
+		switch t.tools.Type {
+		case "preset":
+			// Preset: --tools=preset:claude_code
+			if t.tools.Preset != "" {
+				args = append(args, fmt.Sprintf("--tools=preset:%s", t.tools.Preset))
+			}
+		case "explicit":
+			// Explicit list: --allowed-tools=Read,Write,Bash
+			if len(t.tools.Tools) > 0 {
+				args = append(args, fmt.Sprintf("--allowed-tools=%s", strings.Join(t.tools.Tools, ",")))
+			}
+		}
+	}
 
 	// MCP servers
 	if len(t.mcpServers) > 0 {
@@ -514,7 +574,7 @@ func (t *Transport) handleStdout() {
 	}
 }
 
-// handleStderr reads from stderr and forwards to error channel.
+// handleStderr reads from stderr and forwards to callback or error channel.
 func (t *Transport) handleStderr() {
 	defer t.wg.Done()
 
@@ -532,10 +592,27 @@ func (t *Transport) handleStderr() {
 
 			line := scanner.Text()
 			if line != "" {
-				select {
-				case t.errChan <- fmt.Errorf("CLI stderr: %s", line):
-				case <-t.ctx.Done():
-					return
+				// If stderr callback is set, invoke it with panic recovery
+				if t.stderrCallback != nil {
+					func() {
+						defer func() {
+							if r := recover(); r != nil {
+								// Log panic but don't crash the session
+								select {
+								case t.errChan <- fmt.Errorf("stderr callback panic: %v", r):
+								case <-t.ctx.Done():
+								}
+							}
+						}()
+						t.stderrCallback(line)
+					}()
+				} else {
+					// Default behavior: forward to error channel
+					select {
+					case t.errChan <- fmt.Errorf("CLI stderr: %s", line):
+					case <-t.ctx.Done():
+						return
+					}
 				}
 			}
 		}
