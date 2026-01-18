@@ -523,3 +523,35 @@ func WithPromptMcpServers(servers map[string]shared.McpServerConfig) PromptOptio
 		opts.McpServers = servers
 	}
 }
+
+// WithHooks registers hook handlers for session lifecycle events.
+// Hooks are executed in-process when the corresponding events occur.
+//
+// Example:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithModel("claude-sonnet-4-20250514"),
+//	    v2.WithHooks(
+//	        shared.HookConfig{
+//	            Event:   shared.HookEventPreToolUse,
+//	            Matcher: "Write|Edit",
+//	            Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+//	                // Validate file path before write
+//	                preToolInput := input.(*shared.PreToolUseHookInput)
+//	                filePath := preToolInput.ToolInput["file_path"].(string)
+//	                if !strings.HasPrefix(filePath, "/allowed/dir") {
+//	                    return &shared.SyncHookOutput{
+//	                        Decision: "block",
+//	                        Reason:   "Cannot write outside allowed directory",
+//	                    }, nil
+//	                }
+//	                return &shared.SyncHookOutput{Continue: true}, nil
+//	            },
+//	        },
+//	    ),
+//	)
+func WithHooks(hooks ...shared.HookConfig) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.Hooks = append(opts.Hooks, hooks...)
+	}
+}

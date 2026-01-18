@@ -113,6 +113,10 @@ type V2SessionOptions struct {
 	// EnablePartialMessages enables streaming of partial messages.
 	EnablePartialMessages bool `json:"enable_partial_messages,omitempty"`
 
+	// Hooks contains registered hook handlers for session lifecycle events.
+	// Hooks are executed in-process when the corresponding events occur.
+	Hooks []shared.HookConfig `json:"hooks,omitempty"`
+
 	// clientFactory provides a factory for creating clients (DIP compliance).
 	// If nil, the default factory is used. This is unexported but settable via WithClientFactory.
 	clientFactory ClientFactory
