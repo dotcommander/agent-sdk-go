@@ -58,15 +58,46 @@ func (m *MockClient) Interrupt() error {
 	return nil
 }
 
-func (m *MockClient) SetModel(model string) {
-	m.model = model
+func (m *MockClient) InterruptGraceful(ctx context.Context) error {
+	return nil
 }
 
-func (m *MockClient) SetPermissionMode(mode string) {
-	// Mock implementation
+func (m *MockClient) SetModel(ctx context.Context, model *string) error {
+	if model != nil {
+		m.model = *model
+	}
+	return nil
 }
 
-func (m *MockClient) RewindFiles(ctx context.Context, files []string) error {
+func (m *MockClient) SetPermissionMode(ctx context.Context, mode string) error {
+	return nil
+}
+
+func (m *MockClient) RewindFiles(ctx context.Context, messageUUID string) error {
+	return nil
+}
+
+func (m *MockClient) GetStreamIssues() []shared.StreamIssue {
+	return nil
+}
+
+func (m *MockClient) GetStreamStats() shared.StreamStats {
+	return shared.StreamStats{}
+}
+
+func (m *MockClient) GetServerInfo(ctx context.Context) (map[string]any, error) {
+	return map[string]any{
+		"connected":       true,
+		"transport_type":  "mock",
+		"protocol_active": false,
+	}, nil
+}
+
+func (m *MockClient) IsProtocolActive() bool {
+	return false
+}
+
+func (m *MockClient) AddContextFiles(ctx context.Context, files []string) error {
 	return nil
 }
 

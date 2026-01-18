@@ -185,7 +185,7 @@ func TestToolsExplicit(t *testing.T) {
 func TestCanUseToolCallback_AllowBehavior(t *testing.T) {
 	t.Parallel()
 
-	callback := func(ctx context.Context, toolName string, toolInput map[string]any, options shared.CanUseToolOptions) (shared.PermissionResult, error) {
+	callback := func(_ context.Context, _ string, _ map[string]any, _ shared.CanUseToolOptions) (shared.PermissionResult, error) {
 		return shared.PermissionResult{
 			Behavior: shared.PermissionBehaviorAllow,
 		}, nil
@@ -200,7 +200,7 @@ func TestCanUseToolCallback_AllowBehavior(t *testing.T) {
 func TestCanUseToolCallback_DenyBehavior(t *testing.T) {
 	t.Parallel()
 
-	callback := func(ctx context.Context, toolName string, toolInput map[string]any, options shared.CanUseToolOptions) (shared.PermissionResult, error) {
+	callback := func(_ context.Context, _ string, _ map[string]any, _ shared.CanUseToolOptions) (shared.PermissionResult, error) {
 		return shared.PermissionResult{
 			Behavior: shared.PermissionBehaviorDeny,
 			Message:  "Access denied to this path",
@@ -217,7 +217,7 @@ func TestCanUseToolCallback_DenyBehavior(t *testing.T) {
 func TestCanUseToolCallback_ModifyInput(t *testing.T) {
 	t.Parallel()
 
-	callback := func(ctx context.Context, toolName string, toolInput map[string]any, options shared.CanUseToolOptions) (shared.PermissionResult, error) {
+	callback := func(_ context.Context, _ string, toolInput map[string]any, _ shared.CanUseToolOptions) (shared.PermissionResult, error) {
 		// Sanitize the input
 		modified := make(map[string]any)
 		for k, v := range toolInput {
