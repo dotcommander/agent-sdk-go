@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 // ValidateMessage validates a message for protocol compliance.
@@ -514,4 +516,208 @@ func sanitizeContentBlock(block ContentBlock) interface{} {
 	default:
 		return fmt.Sprintf("unknown content block type: %T", block)
 	}
+}
+
+// StreamValidator tracks tool requests and results to detect incomplete streams.
+// It provides validation for stream integrity and collects statistics about message processing.
+type StreamValidator struct {
+	mu              sync.RWMutex
+	toolsRequested  map[string]bool // tool_use_id -> seen
+	toolsReceived   map[string]bool // tool_use_id -> seen
+	totalMessages   int
+	partialMessages int
+	errors          int
+	startTime       time.Time
+	streamEnded     bool
+}
+
+// NewStreamValidator creates a new stream validator.
+func NewStreamValidator() *StreamValidator {
+	return &StreamValidator{
+		toolsRequested: make(map[string]bool),
+		toolsReceived:  make(map[string]bool),
+		startTime:      time.Now(),
+	}
+}
+
+// TrackMessage tracks a message and updates validation state.
+// Call this for each message received from the stream.
+func (v *StreamValidator) TrackMessage(msg Message) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	v.totalMessages++
+
+	if msg == nil {
+		return
+	}
+
+	switch m := msg.(type) {
+	case *AssistantMessage:
+		// Track tool use requests from assistant message content blocks
+		for _, block := range m.Content {
+			switch b := block.(type) {
+			case *ToolUseBlock:
+				if b.ToolUseID != "" {
+					v.toolsRequested[b.ToolUseID] = true
+				}
+			case *ToolResultBlock:
+				if b.ToolUseID != "" {
+					v.toolsReceived[b.ToolUseID] = true
+				}
+			}
+		}
+
+	case *UserMessage:
+		// Track tool results from user message content blocks
+		if blocks, ok := m.Content.([]ContentBlock); ok {
+			for _, block := range blocks {
+				if toolResult, ok := block.(*ToolResultBlock); ok {
+					if toolResult.ToolUseID != "" {
+						v.toolsReceived[toolResult.ToolUseID] = true
+					}
+				}
+			}
+		}
+
+	case *StreamEvent:
+		// Stream events are partial messages
+		v.partialMessages++
+
+	case *ResultMessage:
+		// Track result messages with errors
+		if m.IsError {
+			v.errors++
+		}
+	}
+}
+
+// TrackError records an error encountered during stream processing.
+func (v *StreamValidator) TrackError() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.errors++
+}
+
+// TrackToolRequest records a tool use request by ID.
+func (v *StreamValidator) TrackToolRequest(toolUseID string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.toolsRequested[toolUseID] = true
+}
+
+// TrackToolResult records a tool result by ID.
+func (v *StreamValidator) TrackToolResult(toolUseID string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.toolsReceived[toolUseID] = true
+}
+
+// MarkStreamEnd marks the stream as ended.
+// Call this when the stream closes normally.
+func (v *StreamValidator) MarkStreamEnd() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.streamEnded = true
+}
+
+// GetIssues returns validation issues detected in the stream.
+// Call after MarkStreamEnd for complete results.
+func (v *StreamValidator) GetIssues() []StreamIssue {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	var issues []StreamIssue
+
+	// Check for tool requests without responses
+	for toolID := range v.toolsRequested {
+		if !v.toolsReceived[toolID] {
+			issues = append(issues, StreamIssue{
+				UUID:   toolID,
+				Type:   "incomplete_tool",
+				Detail: "tool request has no matching result",
+			})
+		}
+	}
+
+	// Check for orphaned tool results
+	for toolID := range v.toolsReceived {
+		if !v.toolsRequested[toolID] {
+			issues = append(issues, StreamIssue{
+				UUID:   toolID,
+				Type:   "orphan_result",
+				Detail: "tool result has no matching request",
+			})
+		}
+	}
+
+	// Check if stream ended without messages
+	if v.streamEnded && v.totalMessages == 0 {
+		issues = append(issues, StreamIssue{
+			Type:   "empty_stream",
+			Detail: "stream ended without any messages",
+		})
+	}
+
+	return issues
+}
+
+// GetStats returns statistics about the stream.
+func (v *StreamValidator) GetStats() StreamStats {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	return StreamStats{
+		TotalMessages:   v.totalMessages,
+		PartialMessages: v.partialMessages,
+		Errors:          v.errors,
+		ProcessingTime:  time.Since(v.startTime).String(),
+	}
+}
+
+// Reset resets the validator state for reuse.
+func (v *StreamValidator) Reset() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	v.toolsRequested = make(map[string]bool)
+	v.toolsReceived = make(map[string]bool)
+	v.totalMessages = 0
+	v.partialMessages = 0
+	v.errors = 0
+	v.startTime = time.Now()
+	v.streamEnded = false
+}
+
+// IsComplete returns true if the stream is complete and has no issues.
+func (v *StreamValidator) IsComplete() bool {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	if !v.streamEnded {
+		return false
+	}
+
+	// Check all tool requests have responses
+	for toolID := range v.toolsRequested {
+		if !v.toolsReceived[toolID] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// PendingToolCount returns the number of tool requests awaiting results.
+func (v *StreamValidator) PendingToolCount() int {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	count := 0
+	for toolID := range v.toolsRequested {
+		if !v.toolsReceived[toolID] {
+			count++
+		}
+	}
+	return count
 }

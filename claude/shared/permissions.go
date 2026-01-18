@@ -87,3 +87,72 @@ type CanUseToolCallback func(
 	toolInput map[string]any,
 	opts CanUseToolOptions,
 ) (PermissionResult, error)
+
+// PermissionResultOption configures a PermissionResult.
+type PermissionResultOption func(*PermissionResult)
+
+// NewPermissionResultAllow creates a permission result that allows tool execution.
+// Optionally modify input or suggest permission updates via options.
+//
+// Example:
+//
+//	return shared.NewPermissionResultAllow(
+//	    shared.WithUpdatedInput(map[string]any{"path": "/safe/path"}),
+//	), nil
+func NewPermissionResultAllow(opts ...PermissionResultOption) PermissionResult {
+	result := PermissionResult{
+		Behavior: PermissionBehaviorAllow,
+	}
+	for _, opt := range opts {
+		opt(&result)
+	}
+	return result
+}
+
+// NewPermissionResultDeny creates a permission result that denies tool execution.
+// The message explains why the tool use was denied.
+//
+// Example:
+//
+//	return shared.NewPermissionResultDeny("Path outside allowed directories"), nil
+func NewPermissionResultDeny(message string, opts ...PermissionResultOption) PermissionResult {
+	result := PermissionResult{
+		Behavior: PermissionBehaviorDeny,
+		Message:  message,
+	}
+	for _, opt := range opts {
+		opt(&result)
+	}
+	return result
+}
+
+// WithUpdatedInput modifies the tool input before execution.
+// Only applicable to allow results.
+func WithUpdatedInput(input map[string]any) PermissionResultOption {
+	return func(r *PermissionResult) {
+		r.UpdatedInput = input
+	}
+}
+
+// WithPermissionUpdates suggests permission rule changes.
+// Can be used with both allow and deny results.
+func WithPermissionUpdates(updates ...PermissionUpdate) PermissionResultOption {
+	return func(r *PermissionResult) {
+		r.UpdatedPermissions = updates
+	}
+}
+
+// WithInterrupt terminates the session on denial.
+// Only applicable to deny results.
+func WithInterrupt(interrupt bool) PermissionResultOption {
+	return func(r *PermissionResult) {
+		r.Interrupt = interrupt
+	}
+}
+
+// WithToolUseID sets the tool use ID on the result.
+func WithToolUseID(toolUseID string) PermissionResultOption {
+	return func(r *PermissionResult) {
+		r.ToolUseID = toolUseID
+	}
+}
