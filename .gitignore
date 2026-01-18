@@ -1,6 +1,18 @@
 # Binaries
 demo
 agent-sdk-go
+basic-query
+multi-turn
+streaming
+# Catch-all for example binaries built in root
+chatapp
+configuration
+custom-tools
+error-handling
+hooks-lifecycle
+permission-modes
+research-agent
+session-control
 
 # Reference SDK (not part of project)
 reference-sdk/
