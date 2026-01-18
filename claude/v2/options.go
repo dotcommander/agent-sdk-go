@@ -555,3 +555,110 @@ func WithHooks(hooks ...shared.HookConfig) SessionOption {
 		opts.Hooks = append(opts.Hooks, hooks...)
 	}
 }
+
+// WithCwd sets the working directory for the Claude CLI subprocess.
+// File operations will resolve relative to this directory.
+//
+// Example:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithCwd("/path/to/project"),
+//	)
+func WithCwd(cwd string) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.Cwd = cwd
+	}
+}
+
+// WithPromptCwd sets the working directory for a one-shot prompt.
+func WithPromptCwd(cwd string) PromptOption {
+	return func(opts *PromptOptions) {
+		opts.Cwd = cwd
+	}
+}
+
+// WithTools sets the tools configuration (preset or explicit list).
+//
+// Example using preset:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithTools(shared.ToolsPreset("claude_code")),
+//	)
+//
+// Example using explicit list:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithTools(shared.ToolsExplicit("Read", "Write", "Bash")),
+//	)
+func WithTools(tools *shared.ToolsConfig) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.Tools = tools
+	}
+}
+
+// WithPromptTools sets the tools configuration for a one-shot prompt.
+func WithPromptTools(tools *shared.ToolsConfig) PromptOption {
+	return func(opts *PromptOptions) {
+		opts.Tools = tools
+	}
+}
+
+// WithStderr sets a callback for subprocess stderr output.
+// Each line from stderr is passed to the callback for logging or processing.
+//
+// Example:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithStderr(func(line string) {
+//	        log.Printf("[Claude CLI] %s", line)
+//	    }),
+//	)
+func WithStderr(callback func(line string)) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.Stderr = callback
+	}
+}
+
+// WithPromptStderr sets a callback for stderr output for a one-shot prompt.
+func WithPromptStderr(callback func(line string)) PromptOption {
+	return func(opts *PromptOptions) {
+		opts.Stderr = callback
+	}
+}
+
+// WithCanUseTool sets a permission callback for runtime tool approval.
+// The callback is invoked before each tool execution to allow/deny usage.
+//
+// Example:
+//
+//	session, err := v2.CreateSession(ctx,
+//	    v2.WithCanUseTool(func(ctx context.Context, toolName string, toolInput map[string]any, opts shared.CanUseToolOptions) (shared.PermissionResult, error) {
+//	        // Allow all reads, but require confirmation for writes
+//	        if toolName == "Read" {
+//	            return shared.PermissionResult{Behavior: shared.PermissionBehaviorAllow}, nil
+//	        }
+//	        if toolName == "Write" {
+//	            // Check file path
+//	            path := toolInput["file_path"].(string)
+//	            if !strings.HasPrefix(path, "/allowed/") {
+//	                return shared.PermissionResult{
+//	                    Behavior: shared.PermissionBehaviorDeny,
+//	                    Message:  "Cannot write outside /allowed/ directory",
+//	                }, nil
+//	            }
+//	        }
+//	        return shared.PermissionResult{Behavior: shared.PermissionBehaviorAllow}, nil
+//	    }),
+//	)
+func WithCanUseTool(callback shared.CanUseToolCallback) SessionOption {
+	return func(opts *V2SessionOptions) {
+		opts.CanUseTool = callback
+	}
+}
+
+// WithPromptCanUseTool sets a permission callback for a one-shot prompt.
+func WithPromptCanUseTool(callback shared.CanUseToolCallback) PromptOption {
+	return func(opts *PromptOptions) {
+		opts.CanUseTool = callback
+	}
+}
