@@ -71,33 +71,32 @@ go run examples/mcp_tools/main.go
 
 The MCP SDK parity implementation includes:
 
-### 1. Core Types (`internal/claude/mcp/`)
+### 1. Core Types (`claude/mcp/`)
 - `SdkMcpTool` - Tool definition with handler
 - `SdkMcpServer` - Server with tool collection
 - JSON-RPC handlers for MCP protocol
 
-### 2. Transport Integration (`internal/claude/subprocess/`)
+### 2. Transport Integration (`claude/subprocess/`)
 - `McpServers` field in `TransportConfig`
 - `--mcp-config` flag generation in `buildArgs()`
 - SDK server instance extraction (non-serialized)
 
-### 3. Client Interface (`internal/claude/types.go`)
+### 3. Client Interface (`claude/types.go`)
 - `McpServerStatus()` method in `Controller` interface
 - `SetMcpServers()` method for dynamic configuration
 
-### 4. Shared Types (`internal/claude/shared/mcp.go`)
+### 4. Shared Types (`claude/shared/mcp.go`)
 - `McpSdkServerConfig` with `Instance` field (marked `json:"-"`)
 - Custom `MarshalJSON()` to exclude instance from serialization
 
 ## Notes
 
-- This is a **CLI wrapper**, not an HTTP client SDK
-- MCP tools run in-process, not as external processes
+- This SDK uses subprocess transport to communicate with Claude CLI
+- MCP tools run in-process within your Go application
 - Full tool execution requires Claude CLI to be installed
 - The example shows API usage; actual tool execution requires CLI integration
 
 ## See Also
 
 - `SPEC-MCP-SDK-PARITY.md` - Full implementation specification
-- `reference-go-sdk/examples/mcp_tools/` - Reference SDK example
-- `internal/claude/mcp/sdk_server_test.go` - Test suite
+- `claude/mcp/sdk_server_test.go` - Test suite

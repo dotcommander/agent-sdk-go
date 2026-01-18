@@ -4,27 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`agent-sdk-go` is a **CLI wrapper** around the Claude CLI:
-- **CLI tool** (`cmd/`) for interacting with Claude via subprocess
-- **Internal packages** (`internal/`) - not importable as a library
+`agent-sdk-go` is a **public Go SDK** for building agents with Claude Code:
+- **Public packages** (`claude/`) - importable as `github.com/dotcommander/agent-sdk-go/claude`
+- **Subprocess transport** - communicates with Claude CLI via stdin/stdout streaming
+- **Examples** (`examples/`) - usage demonstrations
 
-**Note:** This is NOT an HTTP client SDK. It spawns the Claude CLI as a subprocess.
+**Note:** This SDK spawns the Claude CLI as a subprocess (not HTTP API). Requires Claude CLI installed.
 
 ## Build & Development
 
 ### Installation
 ```bash
-# Build binary
-go build -o agent-sdk-go ./cmd
+# Install the SDK
+go get github.com/dotcommander/agent-sdk-go
 
-# Install globally (option 1)
-go install ./cmd
-
-# Symlink (option 2 - keeps binary in project)
-ln -sf "$(pwd)/agent-sdk-go" ~/go/bin/agent-sdk-go
-
-# Release build with version info
-go build -ldflags "-X main.version=$(git describe --tags 2>/dev/null || echo dev)" -o agent-sdk-go ./cmd
+# Or add to go.mod
+require github.com/dotcommander/agent-sdk-go latest
 ```
 
 ### Testing
@@ -43,20 +38,19 @@ go test -tags=integration ./...
 **Coverage by package:**
 | Package | Coverage |
 |---------|----------|
-| internal/app | 93% |
-| internal/claude/parser | 83% |
-| internal/claude/cli | 56% |
-| internal/claude/subprocess | 44% |
-| internal/claude/shared | 26% |
-| internal/claude/v2 | 5% (integration tests excluded) |
+| claude/parser | 83% |
+| claude/cli | 56% |
+| claude/subprocess | 44% |
+| claude/shared | 26% |
+| claude/v2 | 5% (integration tests excluded) |
 
 ### Single Test Execution
 ```bash
 # Run specific test
-go test ./internal/claude -run TestClient
+go test ./claude -run TestClient
 
 # Run with verbose output
-go test ./internal/claude/parser -v -run TestParser
+go test ./claude/parser -v -run TestParser
 
 # Run with race detector
 go test ./... -race
@@ -67,28 +61,26 @@ go test ./... -race
 ### Structure
 ```
 agent-sdk-go/
-├── cmd/                    # CLI entry point
-│   └── agent/              # Main binary
-├── internal/               # Internal packages (not importable)
-│   ├── app/                # Application configuration
-│   └── claude/             # Claude CLI wrapper
-│       ├── shared/         # Shared types, options, factory
-│       │   ├── agents.go       # Agent definitions
-│       │   ├── hooks.go        # Hook system (12 event types)
-│       │   ├── mcp.go          # MCP server configurations
-│       │   ├── message.go      # Message types
-│       │   ├── options.go      # Base options (25+ fields)
-│       │   ├── permissions.go  # Permission system
-│       │   ├── sandbox.go      # Sandbox settings
-│       │   ├── types.go        # Account, model, command info
-│       │   ├── usage.go        # Usage tracking types
-│       │   └── tools/          # Tool input schemas
-│       ├── cli/            # CLI discovery and availability
-│       ├── parser/         # JSON message parsing
-│       ├── subprocess/     # Process management, transport
-│       └── v2/             # V2 session/prompt API
+├── claude/                 # Public SDK package (import this)
+│   ├── client.go           # High-level Client interface
+│   ├── types.go            # Message types, interfaces
+│   ├── options.go          # Client configuration options
+│   ├── shared/             # Shared types, options, factory
+│   │   ├── agents.go       # Agent definitions
+│   │   ├── hooks.go        # Hook system (12 event types)
+│   │   ├── mcp.go          # MCP server configurations
+│   │   ├── message.go      # Message types
+│   │   ├── options.go      # Base options (25+ fields)
+│   │   ├── permissions.go  # Permission system
+│   │   ├── sandbox.go      # Sandbox settings
+│   │   └── tools/          # Tool input schemas
+│   ├── cli/                # CLI discovery and availability
+│   ├── parser/             # JSON message parsing
+│   ├── subprocess/         # Process management, transport
+│   ├── mcp/                # MCP server support
+│   └── v2/                 # V2 session/prompt API
+├── examples/               # Usage examples
 └── docs/                   # Documentation
-    └── usage.md            # Comprehensive usage guide
 ```
 
 ### Key Patterns
@@ -113,17 +105,12 @@ state, _ := gokart.LoadState[MyState]("agent-sdk-go", "state.json")
 
 ## Common Development Tasks
 
-### Adding New CLI Commands
-1. Add command definition in `internal/commands/`
-2. Register in `internal/commands/root.go`
-3. Add business logic in `internal/actions/`
-4. Add tests in `internal/actions/*_test.go`
-
-### Extending the Internal Packages
-1. Add types to `internal/claude/shared/types.go`
-2. Implement functionality in appropriate `internal/claude/*` package
-3. Add corresponding tests in `*_test.go` files
-4. Maintain test coverage (target 80%+)
+### Extending the SDK
+1. Add types to `claude/shared/types.go`
+2. Implement functionality in appropriate `claude/*` package
+3. Export new types/functions via `claude/exports.go` if needed
+4. Add corresponding tests in `*_test.go` files
+5. Maintain test coverage (target 80%+)
 
 ### Tool Development Pattern
 ```go
@@ -145,51 +132,37 @@ func (e *MyToolExecutor) Execute(ctx context.Context, toolName string, args map[
 err := client.RegisterTool(toolDefinition, &MyToolExecutor{})
 ```
 
-## CLI Usage Examples
-
-```bash
-# Set API key
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Interactive chat
-agent-sdk-go agent run --model "claude-3-5-sonnet-20241022"
-
-# Stream responses
-agent-sdk-go agent stream
-
-# Test tool execution
-agent-sdk-go agent tool
-
-# Example greet command
-agent-sdk-go greet --name "Alice"
-```
-
-## Go API Usage (Internal)
+## SDK Usage Examples
 
 ```go
-// NOTE: These packages are internal and not importable from external projects.
-// This is a CLI tool, not a library.
+import "github.com/dotcommander/agent-sdk-go/claude"
 
-import "agent-sdk-go/internal/claude/v2"
+// Simple one-shot query
+client, _ := claude.NewClient()
+response, err := client.Query(ctx, "What is 2+2?")
 
-// Create a session (requires Claude CLI installed)
+// Streaming responses
+msgChan, errChan := client.QueryStream(ctx, "Tell me a story")
+for msg := range msgChan {
+    fmt.Printf("%T: %+v\n", msg, msg)
+}
+
+// Interactive session
+client.Connect(ctx)
+defer client.Disconnect()
+msgChan, errChan := client.ReceiveMessages(ctx)
+
+// V2 Session API
+import "github.com/dotcommander/agent-sdk-go/claude/v2"
+
 session, err := v2.CreateSession(ctx,
     v2.WithModel("claude-sonnet-4-20250514"),
     v2.WithTimeout(30*time.Second),
 )
-if err != nil {
-    log.Fatal(err)
-}
 defer session.Close()
 
-// Send a message
 session.Send("Hello!")
 resp, err := session.SendMessage(ctx)
-
-// Or use one-shot prompt
-result, err := v2.Prompt(ctx, "What is 2+2?",
-    v2.WithPromptModel("claude-sonnet-4-20250514"),
-)
 ```
 
 ## SDK Feature Status
@@ -214,9 +187,10 @@ Full TypeScript SDK port completed. All types from `@anthropic-ai/claude-agent-s
 
 ## Implementation Notes
 
-This is a **CLI subprocess wrapper**, not an HTTP client SDK:
-- Spawns `claude` CLI as a subprocess
-- Parses JSON output from CLI stdout
+This SDK uses **subprocess transport** to communicate with Claude CLI:
+- Spawns `claude` CLI as a subprocess with `--output-format stream-json`
+- Bidirectional communication via stdin/stdout pipes
+- Parses JSON streaming output from CLI
 - Requires Claude CLI to be installed and authenticated
 - Uses Go idioms (interfaces, error wrapping, functional options)
 - Table-driven tests with testify assertions
@@ -231,7 +205,7 @@ This is a **CLI subprocess wrapper**, not an HTTP client SDK:
 
 ## Scale Limitations
 
-This CLI subprocess wrapper has several scale limitations that should be considered for production workloads:
+This SDK's subprocess transport has several scale limitations to consider for production workloads:
 
 ### 1. Message Channel Buffer = 100
 **Trigger:** High-throughput applications (>10 messages/second)
