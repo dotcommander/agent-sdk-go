@@ -13,3 +13,7 @@ reference-sdk/
 coverage.out
 coverage.html
 agent-demo
+
+# Temporary spec/planning files
+SPEC-*.md
+docs/SPEC-*.md
