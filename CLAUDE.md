@@ -90,19 +90,6 @@ agent-sdk-go/
 3. **Separation of Concerns**: SDK library vs. CLI commands vs. business logic
 4. **Concurrency Ready**: Uses goroutines and channels for streaming (hand-rolled SSE parser)
 
-### Configuration Loading Order
-1. `./config.yaml` (current directory)
-2. `~/.config/agent-sdk-go/config.yaml`
-3. `/etc/agent-sdk-go/config.yaml`
-4. Environment variables (prefix: `AGENT-SDK-GO_`)
-
-### State Persistence
-```go
-// Save/load runtime state between executions
-gokart.SaveState("agent-sdk-go", "state.json", myState)
-state, _ := gokart.LoadState[MyState]("agent-sdk-go", "state.json")
-```
-
 ## Common Development Tasks
 
 ### Extending the SDK
@@ -259,7 +246,6 @@ This SDK's subprocess transport has several scale limitations to consider for pr
 
 ## Project References
 
-- `docs/usage.md` - Comprehensive usage guide with examples
-- `SPEC-ANTHROPIC-SDK-PORT.md` - Original implementation specification
-- `SDK-ENHANCEMENT-PLAN.md` - Detailed roadmap (now complete)
+- `docs/` - Comprehensive documentation (getting-started, configuration, streaming, etc.)
+- `examples/` - 21 usage examples with READMEs
 - `README.md` - Project overview and quick start
