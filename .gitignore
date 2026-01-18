@@ -1,18 +1,26 @@
-# Binaries
-demo
-agent-sdk-go
-basic-query
-multi-turn
-streaming
-# Catch-all for example binaries built in root
-chatapp
-configuration
-custom-tools
-error-handling
-hooks-lifecycle
-permission-modes
-research-agent
-session-control
+# Binaries (root-level only, use / prefix)
+/demo
+/agent-sdk-go
+/basic-query
+/multi-turn
+/streaming
+/chatapp
+/configuration
+/custom-tools
+/error-handling
+/hooks-lifecycle
+/permission-modes
+/research-agent
+/session-control
+/debugging-diagnostics
+/file-checkpointing
+/partial-streaming
+/plugins
+/programmatic-subagents
+/sandbox-security
+/sdk-mcp-server
+/structured-output
+/mcp_tools
 
 # Reference SDK (not part of project)
 reference-sdk/
