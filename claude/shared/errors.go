@@ -381,6 +381,90 @@ func IsProtocolError(err error) bool {
 	return ok
 }
 
+// IsConfigurationError checks if an error is a ConfigurationError.
+func IsConfigurationError(err error) bool {
+	_, ok := err.(*ConfigurationError)
+	return ok
+}
+
+// IsProcessError checks if an error is a ProcessError.
+func IsProcessError(err error) bool {
+	_, ok := err.(*ProcessError)
+	return ok
+}
+
+// As*Error extraction helpers - use errors.As for wrapped error support
+
+// AsCLINotFoundError extracts a CLINotFoundError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsCLINotFoundError(err error) (*CLINotFoundError, bool) {
+	var target *CLINotFoundError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsConnectionError extracts a ConnectionError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsConnectionError(err error) (*ConnectionError, bool) {
+	var target *ConnectionError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsTimeoutError extracts a TimeoutError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsTimeoutError(err error) (*TimeoutError, bool) {
+	var target *TimeoutError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsParserError extracts a ParserError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsParserError(err error) (*ParserError, bool) {
+	var target *ParserError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsProtocolError extracts a ProtocolError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsProtocolError(err error) (*ProtocolError, bool) {
+	var target *ProtocolError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsConfigurationError extracts a ConfigurationError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsConfigurationError(err error) (*ConfigurationError, bool) {
+	var target *ConfigurationError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsProcessError extracts a ProcessError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsProcessError(err error) (*ProcessError, bool) {
+	var target *ProcessError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
 // CircuitBreaker interface defines the contract for a circuit breaker pattern.
 // This is a stub implementation that can be completed later.
 type CircuitBreaker interface {
