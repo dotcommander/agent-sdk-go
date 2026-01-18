@@ -1,11 +1,42 @@
 package shared
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
 )
+
+// ErrNoMoreMessages is returned by MessageIterator.Next when there are no more messages.
+var ErrNoMoreMessages = errors.New("no more messages")
+
+// MessageIterator provides an iterator pattern for streaming messages.
+// This is the recommended way to consume messages from a streaming session.
+//
+// Example:
+//
+//	iter := client.ReceiveResponse(ctx)
+//	defer iter.Close()
+//	for {
+//	    msg, err := iter.Next(ctx)
+//	    if errors.Is(err, shared.ErrNoMoreMessages) {
+//	        break
+//	    }
+//	    if err != nil {
+//	        return err
+//	    }
+//	    // Process message
+//	}
+type MessageIterator interface {
+	// Next returns the next message in the stream.
+	// Returns ErrNoMoreMessages when the stream is exhausted.
+	// Returns context.Canceled or context.DeadlineExceeded if the context is cancelled.
+	Next(ctx context.Context) (Message, error)
+	// Close releases any resources held by the iterator.
+	Close() error
+}
 
 // Message type constants
 const (

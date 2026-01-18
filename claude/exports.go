@@ -389,3 +389,43 @@ type McpServerStatus = shared.McpServerStatus
 
 // McpSetServersResult represents the result of setting MCP servers.
 type McpSetServersResult = shared.McpSetServersResult
+
+// =============================================================================
+// Control Protocol Types (for advanced usage)
+// =============================================================================
+
+// Control protocol message type constants.
+const (
+	// ControlMessageTypeRequest is sent TO the CLI to request an action.
+	ControlMessageTypeRequest = "control_request"
+	// ControlMessageTypeResponse is received FROM the CLI as a response.
+	ControlMessageTypeResponse = "control_response"
+)
+
+// Request subtype constants matching TypeScript SDK for 100% parity.
+const (
+	// ControlSubtypeInterrupt requests interruption of current operation.
+	ControlSubtypeInterrupt = "interrupt"
+	// ControlSubtypeCanUseTool requests permission to use a tool.
+	ControlSubtypeCanUseTool = "can_use_tool"
+	// ControlSubtypeInitialize performs the control protocol handshake.
+	ControlSubtypeInitialize = "initialize"
+	// ControlSubtypeSetPermissionMode changes the permission mode at runtime.
+	ControlSubtypeSetPermissionMode = "set_permission_mode"
+	// ControlSubtypeSetModel changes the AI model at runtime.
+	ControlSubtypeSetModel = "set_model"
+	// ControlSubtypeHookCallback invokes a registered hook callback.
+	ControlSubtypeHookCallback = "hook_callback"
+	// ControlSubtypeMcpMessage routes an MCP message to an SDK MCP server.
+	ControlSubtypeMcpMessage = "mcp_message"
+	// ControlSubtypeRewindFiles requests file rewind to a specific user message state.
+	ControlSubtypeRewindFiles = "rewind_files"
+)
+
+// Response subtype constants for control responses.
+const (
+	// ControlResponseSubtypeSuccess indicates the request succeeded.
+	ControlResponseSubtypeSuccess = "success"
+	// ControlResponseSubtypeError indicates the request failed.
+	ControlResponseSubtypeError = "error"
+)

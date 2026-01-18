@@ -101,6 +101,10 @@ type Receiver interface {
 
 	// ReceiveResponse receives a single response from Claude CLI.
 	ReceiveResponse(ctx context.Context) (Message, error)
+
+	// ReceiveResponseIterator returns a MessageIterator for consuming messages.
+	// This follows the severity1 SDK pattern for easy migration.
+	ReceiveResponseIterator(ctx context.Context) MessageIterator
 }
 
 // Controller handles runtime configuration.

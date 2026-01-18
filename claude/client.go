@@ -208,6 +208,78 @@ func (c *ClientImpl) ReceiveResponse(ctx context.Context) (Message, error) {
 	}
 }
 
+// ReceiveResponseIterator returns an iterator for receiving messages.
+// This follows the same pattern as severity1's implementation for easy migration.
+//
+// Example:
+//
+//	iter := client.ReceiveResponseIterator(ctx)
+//	defer iter.Close()
+//	for {
+//	    msg, err := iter.Next(ctx)
+//	    if errors.Is(err, claude.ErrNoMoreMessages) {
+//	        break
+//	    }
+//	    if err != nil {
+//	        return err
+//	    }
+//	    // Process message
+//	}
+func (c *ClientImpl) ReceiveResponseIterator(ctx context.Context) MessageIterator {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return &clientIterator{closed: true}
+	}
+
+	msgChan, errChan := transport.ReceiveMessages(ctx)
+	return &clientIterator{
+		msgChan: msgChan,
+		errChan: errChan,
+	}
+}
+
+// clientIterator implements MessageIterator for client message reception.
+type clientIterator struct {
+	msgChan <-chan shared.Message
+	errChan <-chan error
+	closed  bool
+}
+
+// Next returns the next message or an error.
+func (ci *clientIterator) Next(ctx context.Context) (Message, error) {
+	if ci.closed {
+		return nil, ErrNoMoreMessages
+	}
+
+	select {
+	case msg, ok := <-ci.msgChan:
+		if !ok {
+			ci.closed = true
+			return nil, ErrNoMoreMessages
+		}
+		return msg, nil
+	case err, ok := <-ci.errChan:
+		if !ok {
+			ci.closed = true
+			return nil, ErrNoMoreMessages
+		}
+		ci.closed = true
+		return nil, err
+	case <-ctx.Done():
+		ci.closed = true
+		return nil, ctx.Err()
+	}
+}
+
+// Close releases resources associated with the iterator.
+func (ci *clientIterator) Close() error {
+	ci.closed = true
+	return nil
+}
+
 // Interrupt forcibly interrupts the current operation (process-level).
 func (c *ClientImpl) Interrupt() error {
 	c.mu.Lock()

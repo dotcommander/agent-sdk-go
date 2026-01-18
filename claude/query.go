@@ -12,10 +12,12 @@ import (
 )
 
 // ErrNoMoreMessages is returned by MessageIterator.Next when there are no more messages.
-var ErrNoMoreMessages = errors.New("no more messages")
+// Re-exported from shared for convenience.
+var ErrNoMoreMessages = shared.ErrNoMoreMessages
 
 // MessageIterator provides sequential access to messages from a Claude session.
 // It follows Go's io.Reader pattern with Next returning (message, error).
+// Re-exported from shared for convenience.
 //
 // Example:
 //
@@ -35,15 +37,7 @@ var ErrNoMoreMessages = errors.New("no more messages")
 //	    }
 //	    fmt.Printf("%T: %+v\n", msg, msg)
 //	}
-type MessageIterator interface {
-	// Next returns the next message or an error.
-	// Returns ErrNoMoreMessages when the stream is exhausted.
-	Next(ctx context.Context) (Message, error)
-
-	// Close releases resources associated with the iterator.
-	// Must be called to prevent resource leaks.
-	Close() error
-}
+type MessageIterator = shared.MessageIterator
 
 // queryIterator implements MessageIterator with lazy initialization.
 type queryIterator struct {
