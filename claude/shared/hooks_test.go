@@ -43,3 +43,58 @@ func TestPreToolUseHookInput(t *testing.T) {
 	assert.Equal(t, "ls", input.ToolInput["command"])
 	assert.Equal(t, "tool-456", input.ToolUseID)
 }
+
+func TestHookConfig_MatchesToolName(t *testing.T) {
+	tests := []struct {
+		name     string
+		matcher  string
+		toolName string
+		want     bool
+	}{
+		{"empty matcher matches all", "", "Bash", true},
+		{"exact match", "Write", "Write", true},
+		{"no match", "Write", "Read", false},
+		{"regex OR - first", "Write|Edit", "Write", true},
+		{"regex OR - second", "Write|Edit", "Edit", true},
+		{"regex OR - no match", "Write|Edit", "Read", false},
+		{"invalid regex", "[invalid", "anything", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &HookConfig{
+				Event:   HookEventPreToolUse,
+				Matcher: tt.matcher,
+			}
+			assert.Equal(t, tt.want, cfg.MatchesToolName(tt.toolName))
+		})
+	}
+}
+
+func TestHookEventMessage(t *testing.T) {
+	msg := HookEventMessage{
+		Type:           "hook_event",
+		HookEventName:  "PreToolUse",
+		SessionID:      "sess-123",
+		TranscriptPath: "/path/transcript",
+		Cwd:            "/working/dir",
+		ToolName:       "Write",
+		ToolInput:      map[string]any{"file_path": "/test/file.txt"},
+		ToolUseID:      "tool-456",
+	}
+	assert.Equal(t, "hook_event", msg.Type)
+	assert.Equal(t, "PreToolUse", msg.HookEventName)
+	assert.Equal(t, "Write", msg.ToolName)
+}
+
+func TestHookOutput(t *testing.T) {
+	resp := HookOutput{
+		Type:      "hook_response",
+		ToolUseID: "tool-456",
+		Continue:  true,
+		Decision:  "approve",
+	}
+	assert.Equal(t, "hook_response", resp.Type)
+	assert.True(t, resp.Continue)
+	assert.Equal(t, "approve", resp.Decision)
+}

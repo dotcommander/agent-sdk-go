@@ -1,5 +1,11 @@
 package shared
 
+import (
+	"context"
+	"regexp"
+	"time"
+)
+
 // HookEvent represents the type of hook event.
 type HookEvent string
 
@@ -154,4 +160,67 @@ type SyncHookOutput struct {
 	SystemMessage      string         `json:"systemMessage,omitempty"`
 	Reason             string         `json:"reason,omitempty"`
 	HookSpecificOutput map[string]any `json:"hookSpecificOutput,omitempty"`
+}
+
+// HookHandler is the function signature for hook handlers.
+// It receives a context (with timeout) and the typed hook input.
+// Returns a SyncHookOutput and optional error.
+type HookHandler func(ctx context.Context, input any) (*SyncHookOutput, error)
+
+// HookConfig configures a single hook handler with optional tool name matching.
+type HookConfig struct {
+	// Event is the hook event type this handler responds to.
+	Event HookEvent
+	// Matcher is an optional regex pattern to match tool names.
+	// Only applies to tool-related events (PreToolUse, PostToolUse, etc.).
+	// Empty string matches all tools.
+	Matcher string
+	// Handler is the function to execute when the hook fires.
+	Handler HookHandler
+	// Timeout overrides the default hook timeout (30s).
+	// If zero, the default timeout is used.
+	Timeout time.Duration
+}
+
+// MatchesToolName checks if this hook config should execute for the given tool name.
+// Returns true if:
+// - Matcher is empty (matches all)
+// - Tool name matches the regex pattern
+func (c *HookConfig) MatchesToolName(toolName string) bool {
+	if c.Matcher == "" {
+		return true
+	}
+	matched, err := regexp.MatchString(c.Matcher, toolName)
+	if err != nil {
+		// Invalid regex - fail open (don't block on bad config)
+		return false
+	}
+	return matched
+}
+
+// HookEventMessage represents a hook event message from the CLI.
+type HookEventMessage struct {
+	Type           string         `json:"type"` // "hook_event"
+	HookEventName  string         `json:"hook_event_name"`
+	SessionID      string         `json:"session_id"`
+	TranscriptPath string         `json:"transcript_path"`
+	Cwd            string         `json:"cwd"`
+	ToolName       string         `json:"tool_name,omitempty"`
+	ToolInput      map[string]any `json:"tool_input,omitempty"`
+	ToolUseID      string         `json:"tool_use_id,omitempty"`
+	ToolResponse   any            `json:"tool_response,omitempty"`
+	Error          string         `json:"error,omitempty"`
+}
+
+// HookOutput represents the response sent back to the CLI after hook execution.
+// This is distinct from HookResponseMessage which is a system message type.
+type HookOutput struct {
+	Type           string `json:"type"` // "hook_response"
+	ToolUseID      string `json:"tool_use_id,omitempty"`
+	Continue       bool   `json:"continue"`
+	SuppressOutput bool   `json:"suppress_output,omitempty"`
+	Decision       string `json:"decision,omitempty"` // "approve" | "block"
+	StopReason     string `json:"stop_reason,omitempty"`
+	SystemMessage  string `json:"system_message,omitempty"`
+	Reason         string `json:"reason,omitempty"`
 }
