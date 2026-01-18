@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/dotcommander/agent-sdk-go/claude/cli"
+	"github.com/dotcommander/agent-sdk-go/claude/mcp"
 	"github.com/dotcommander/agent-sdk-go/claude/parser"
 	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
@@ -173,6 +174,16 @@ type Transport struct {
 	// Parser registry for message type handling (OCP compliance - inject instead of switch)
 	parserRegistry *parser.MessageParserRegistry
 
+	// Control protocol for bidirectional communication
+	protocol        *Protocol
+	protocolAdapter *ProtocolAdapter
+
+	// Control protocol configuration
+	protocolHooks         map[shared.HookEvent][]ProtocolHookMatcher
+	sdkMcpServers         map[string]*mcp.SdkMcpServer
+	enableCheckpointing   bool
+	enableControlProtocol bool // Explicitly enable control protocol
+
 	// Channels for communication
 	msgChan chan shared.Message
 	errChan chan error
@@ -216,6 +227,17 @@ type TransportConfig struct {
 	ParserRegistry *parser.MessageParserRegistry
 	// McpServers are MCP server configurations.
 	McpServers map[string]shared.McpServerConfig
+
+	// Control protocol configuration
+	// ProtocolHooks configures hook callbacks for the control protocol.
+	ProtocolHooks map[shared.HookEvent][]ProtocolHookMatcher
+	// SdkMcpServers configures in-process MCP servers for control protocol routing.
+	SdkMcpServers map[string]*mcp.SdkMcpServer
+	// EnableCheckpointing enables file checkpointing for RewindFiles.
+	EnableCheckpointing bool
+	// EnableControlProtocol explicitly enables the control protocol.
+	// If false, control protocol is auto-enabled when hooks, permissions, or checkpointing are configured.
+	EnableControlProtocol bool
 }
 
 // createTransport creates a new transport with common initialization logic.
@@ -242,20 +264,24 @@ func createTransport(config *TransportConfig, promptArg *string) (*Transport, er
 	}
 
 	return &Transport{
-		cliPath:        config.CLIPath,
-		cliCommand:     config.CLICommand,
-		model:          config.Model,
-		timeout:        config.Timeout,
-		systemPrompt:   config.SystemPrompt,
-		customArgs:     config.CustomArgs,
-		env:            config.Env,
-		cwd:            config.Cwd,
-		tools:          config.Tools,
-		stderrCallback: config.StderrCallback,
-		canUseTool:     config.CanUseTool,
-		mcpServers:     config.McpServers,
-		promptArg:      promptArg,
-		parserRegistry: registry,
+		cliPath:               config.CLIPath,
+		cliCommand:            config.CLICommand,
+		model:                 config.Model,
+		timeout:               config.Timeout,
+		systemPrompt:          config.SystemPrompt,
+		customArgs:            config.CustomArgs,
+		env:                   config.Env,
+		cwd:                   config.Cwd,
+		tools:                 config.Tools,
+		stderrCallback:        config.StderrCallback,
+		canUseTool:            config.CanUseTool,
+		mcpServers:            config.McpServers,
+		promptArg:             promptArg,
+		parserRegistry:        registry,
+		protocolHooks:         config.ProtocolHooks,
+		sdkMcpServers:         config.SdkMcpServers,
+		enableCheckpointing:   config.EnableCheckpointing,
+		enableControlProtocol: config.EnableControlProtocol,
 	}, nil
 }
 
@@ -388,6 +414,14 @@ func (t *Transport) Connect(ctx context.Context) error {
 		// Start stderr reader goroutine for error reporting
 		t.wg.Add(1)
 		go t.handleStderr()
+
+		// Set up control protocol if needed
+		if t.needsProtocolHandshake() {
+			if err := t.setupControlProtocol(t.ctx); err != nil {
+				t.cleanup()
+				return fmt.Errorf("setup control protocol: %w", err)
+			}
+		}
 
 		t.connected = true
 		return nil
@@ -534,6 +568,18 @@ func (t *Transport) handleStdout() {
 			case t.errChan <- fmt.Errorf("message missing type field"):
 			case <-t.ctx.Done():
 				return
+			}
+			continue
+		}
+
+		// Route control messages to protocol if active
+		if t.protocol != nil && (msgType == MessageTypeControlRequest || msgType == MessageTypeControlResponse) {
+			if err := t.protocol.HandleIncomingMessage(t.ctx, rawMsg); err != nil {
+				select {
+				case t.errChan <- fmt.Errorf("control protocol: %w", err):
+				case <-t.ctx.Done():
+					return
+				}
 			}
 			continue
 		}
@@ -687,6 +733,14 @@ func (t *Transport) Close() error {
 
 	t.connected = false
 
+	// Close control protocol first
+	if t.protocol != nil {
+		_ = t.protocol.Close()
+	}
+	if t.protocolAdapter != nil {
+		_ = t.protocolAdapter.Close()
+	}
+
 	// Cancel context to stop goroutines
 	if t.cancel != nil {
 		t.cancel()
@@ -791,6 +845,12 @@ func (t *Transport) Interrupt() error {
 // cleanup closes all resources without acquiring the lock.
 // The caller must hold t.mu.
 func (t *Transport) cleanup() {
+	if t.protocol != nil {
+		_ = t.protocol.Close()
+	}
+	if t.protocolAdapter != nil {
+		_ = t.protocolAdapter.Close()
+	}
 	if t.stdin != nil {
 		_ = t.stdin.Close()
 	}
@@ -806,4 +866,151 @@ func (t *Transport) cleanup() {
 	if t.errChan != nil {
 		close(t.errChan)
 	}
+}
+
+// needsProtocolHandshake returns true if the transport needs to set up the control protocol.
+// Control protocol is needed when:
+// - Hooks are configured
+// - Permission callback is configured
+// - File checkpointing is enabled
+// - Control protocol is explicitly enabled
+func (t *Transport) needsProtocolHandshake() bool {
+	// Only interactive mode supports control protocol
+	if t.promptArg != nil {
+		return false
+	}
+
+	return t.enableControlProtocol ||
+		t.canUseTool != nil ||
+		len(t.protocolHooks) > 0 ||
+		t.enableCheckpointing
+}
+
+// setupControlProtocol creates and initializes the control protocol.
+func (t *Transport) setupControlProtocol(ctx context.Context) error {
+	if t.stdin == nil {
+		return fmt.Errorf("stdin not available for control protocol")
+	}
+
+	// Create protocol adapter wrapping stdin
+	t.protocolAdapter = NewProtocolAdapter(t.stdin)
+
+	// Build protocol options
+	var opts []ProtocolOption
+
+	if t.canUseTool != nil {
+		opts = append(opts, WithCanUseToolCallback(t.canUseTool))
+	}
+
+	if len(t.protocolHooks) > 0 {
+		opts = append(opts, WithHooks(t.protocolHooks))
+	}
+
+	if len(t.sdkMcpServers) > 0 {
+		opts = append(opts, WithSdkMcpServers(t.sdkMcpServers))
+	}
+
+	// Create protocol handler
+	t.protocol = NewProtocol(t.protocolAdapter, opts...)
+
+	// Start protocol (this starts the message routing)
+	if err := t.protocol.Start(ctx); err != nil {
+		return fmt.Errorf("start protocol: %w", err)
+	}
+
+	// Perform initialization handshake
+	if _, err := t.protocol.Initialize(ctx); err != nil {
+		return fmt.Errorf("initialize protocol: %w", err)
+	}
+
+	return nil
+}
+
+// SetModel changes the AI model during a streaming session via the control protocol.
+// Pass nil to reset to the default model.
+// Returns error if control protocol is not active or the request fails.
+func (t *Transport) SetModel(ctx context.Context, model *string) error {
+	t.mu.RLock()
+	protocol := t.protocol
+	t.mu.RUnlock()
+
+	if protocol == nil {
+		return fmt.Errorf("control protocol not active")
+	}
+
+	return protocol.SetModel(ctx, model)
+}
+
+// SetPermissionMode changes the permission mode during a streaming session via the control protocol.
+// Valid modes: "default", "acceptEdits", "plan", "bypassPermissions", "delegate", "dontAsk"
+// Returns error if control protocol is not active or the request fails.
+func (t *Transport) SetPermissionMode(ctx context.Context, mode string) error {
+	t.mu.RLock()
+	protocol := t.protocol
+	t.mu.RUnlock()
+
+	if protocol == nil {
+		return fmt.Errorf("control protocol not active")
+	}
+
+	return protocol.SetPermissionMode(ctx, mode)
+}
+
+// InterruptProtocol sends an interrupt request via the control protocol.
+// This is different from Interrupt() which forcibly kills the process.
+// Returns error if control protocol is not active or the request fails.
+func (t *Transport) InterruptProtocol(ctx context.Context) error {
+	t.mu.RLock()
+	protocol := t.protocol
+	t.mu.RUnlock()
+
+	if protocol == nil {
+		return fmt.Errorf("control protocol not active")
+	}
+
+	return protocol.Interrupt(ctx)
+}
+
+// RewindFiles reverts tracked files to their state at a specific user message.
+// The userMessageID should be the UUID from a UserMessage received during the session.
+// Requires EnableCheckpointing to be set in TransportConfig.
+// Returns error if control protocol is not active or the request fails.
+func (t *Transport) RewindFiles(ctx context.Context, userMessageID string) error {
+	t.mu.RLock()
+	protocol := t.protocol
+	t.mu.RUnlock()
+
+	if protocol == nil {
+		return fmt.Errorf("control protocol not active")
+	}
+
+	return protocol.RewindFiles(ctx, userMessageID)
+}
+
+// IsProtocolActive returns whether the control protocol is active.
+func (t *Transport) IsProtocolActive() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.protocol != nil && !t.protocol.IsClosed()
+}
+
+// IsProtocolInitialized returns whether the control protocol has completed initialization.
+func (t *Transport) IsProtocolInitialized() bool {
+	t.mu.RLock()
+	protocol := t.protocol
+	t.mu.RUnlock()
+
+	if protocol == nil {
+		return false
+	}
+
+	return protocol.IsInitialized()
+}
+
+// Protocol returns the underlying control protocol for advanced usage.
+// Returns nil if protocol is not active.
+func (t *Transport) Protocol() *Protocol {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.protocol
 }
