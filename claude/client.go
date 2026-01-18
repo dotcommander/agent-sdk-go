@@ -309,3 +309,60 @@ func parseTimeout(s string) time.Duration {
 	}
 	return d
 }
+
+// WithClient creates a client, passes it to the provided function, and ensures
+// proper cleanup. This is the recommended pattern for using the client.
+//
+// The client is automatically connected before calling fn and disconnected after.
+// Any error from fn or from connection/disconnection is returned.
+//
+// Example usage:
+//
+//	err := claude.WithClient(ctx, func(c claude.Client) error {
+//	    response, err := c.Query(ctx, "Hello!")
+//	    if err != nil {
+//	        return err
+//	    }
+//	    fmt.Println(response)
+//	    return nil
+//	}, claude.WithModel("claude-sonnet-4-5-20250929"))
+func WithClient(ctx context.Context, fn func(Client) error, opts ...ClientOption) error {
+	client, err := NewClient(opts...)
+	if err != nil {
+		return fmt.Errorf("create client: %w", err)
+	}
+
+	if err := client.Connect(ctx); err != nil {
+		return fmt.Errorf("connect: %w", err)
+	}
+	defer client.Disconnect()
+
+	return fn(client)
+}
+
+// WithClientTransport creates a client with a custom transport for testing.
+// This allows injecting mock transports for unit testing without subprocess overhead.
+//
+// The transport must already be connected; this function does not call Connect().
+// Cleanup is the responsibility of the caller.
+//
+// Example usage (for testing):
+//
+//	mockTransport := &MockTransport{}
+//	err := claude.WithClientTransport(ctx, mockTransport, func(c claude.Client) error {
+//	    // Test client behavior
+//	    return nil
+//	})
+func WithClientTransport(ctx context.Context, transport *subprocess.Transport, fn func(Client) error, opts ...ClientOption) error {
+	options := DefaultClientOptions()
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	client := &ClientImpl{
+		transport: transport,
+		options:   options,
+	}
+
+	return fn(client)
+}
