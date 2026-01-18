@@ -17,6 +17,7 @@ type ClientImpl struct {
 	transport *subprocess.Transport
 	options   *ClientOptions
 	sessionID string
+	validator *shared.StreamValidator
 	mu        sync.RWMutex
 }
 
@@ -70,6 +71,9 @@ func (c *ClientImpl) Connect(ctx context.Context) error {
 		c.transport = nil
 		return fmt.Errorf("connect transport: %w", err)
 	}
+
+	// Initialize validator for stream tracking
+	c.validator = shared.NewStreamValidator()
 
 	return nil
 }
@@ -204,7 +208,7 @@ func (c *ClientImpl) ReceiveResponse(ctx context.Context) (Message, error) {
 	}
 }
 
-// Interrupt forcibly interrupts the current operation.
+// Interrupt forcibly interrupts the current operation (process-level).
 func (c *ClientImpl) Interrupt() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -216,18 +220,119 @@ func (c *ClientImpl) Interrupt() error {
 	return c.transport.Close()
 }
 
-// SetModel sets the Claude model to use.
-func (c *ClientImpl) SetModel(model string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.options.Model = model
+// InterruptGraceful sends interrupt via control protocol (if active).
+func (c *ClientImpl) InterruptGraceful(ctx context.Context) error {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil
+	}
+
+	return transport.InterruptProtocol(ctx)
 }
 
-// SetPermissionMode sets the permission mode for the session.
-func (c *ClientImpl) SetPermissionMode(mode string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.options.PermissionMode = mode
+// SetModel changes the AI model during a streaming session.
+// Pass nil to reset to the default model.
+// Only works when control protocol is active (connected streaming session).
+func (c *ClientImpl) SetModel(ctx context.Context, model *string) error {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return fmt.Errorf("not connected")
+	}
+
+	return transport.SetModel(ctx, model)
+}
+
+// SetPermissionMode changes the permission mode during a streaming session.
+// Valid modes: "default", "acceptEdits", "plan", "bypassPermissions", "delegate", "dontAsk"
+// Only works when control protocol is active.
+func (c *ClientImpl) SetPermissionMode(ctx context.Context, mode string) error {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return fmt.Errorf("not connected")
+	}
+
+	return transport.SetPermissionMode(ctx, mode)
+}
+
+// RewindFiles reverts tracked files to their state at a specific user message.
+// The messageUUID should be the UUID from a UserMessage received during the session.
+// Requires EnableFileCheckpointing option.
+func (c *ClientImpl) RewindFiles(ctx context.Context, messageUUID string) error {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return fmt.Errorf("not connected")
+	}
+
+	return transport.RewindFiles(ctx, messageUUID)
+}
+
+// GetStreamIssues returns validation issues found in the message stream.
+func (c *ClientImpl) GetStreamIssues() []shared.StreamIssue {
+	c.mu.RLock()
+	validator := c.validator
+	c.mu.RUnlock()
+
+	if validator == nil {
+		return nil
+	}
+
+	return validator.GetIssues()
+}
+
+// GetStreamStats returns statistics about the message stream.
+func (c *ClientImpl) GetStreamStats() shared.StreamStats {
+	c.mu.RLock()
+	validator := c.validator
+	c.mu.RUnlock()
+
+	if validator == nil {
+		return shared.StreamStats{}
+	}
+
+	return validator.GetStats()
+}
+
+// GetServerInfo returns diagnostic information about the client connection.
+func (c *ClientImpl) GetServerInfo(ctx context.Context) (map[string]any, error) {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	return map[string]any{
+		"connected":            true,
+		"transport_type":       "subprocess",
+		"protocol_active":      transport.IsProtocolActive(),
+		"protocol_initialized": transport.IsProtocolInitialized(),
+	}, nil
+}
+
+// IsProtocolActive returns whether the control protocol is active.
+func (c *ClientImpl) IsProtocolActive() bool {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return false
+	}
+
+	return transport.IsProtocolActive()
 }
 
 // SetSessionID sets the session ID for this client.
@@ -245,8 +350,8 @@ func (c *ClientImpl) GetSessionID() string {
 	return c.sessionID
 }
 
-// RewindFiles adds files to the context for the next query.
-func (c *ClientImpl) RewindFiles(ctx context.Context, files []string) error {
+// AddContextFiles adds files to the context for the next query.
+func (c *ClientImpl) AddContextFiles(ctx context.Context, files []string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.options.ContextFiles = append(c.options.ContextFiles, files...)

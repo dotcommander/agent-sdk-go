@@ -1,6 +1,8 @@
 package claude
 
 import (
+	"fmt"
+
 	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
@@ -204,5 +206,218 @@ func WithDebugOptions(debug shared.DebugOptions) func(*ClientOptions) {
 func WithMcpServers(servers map[string]shared.McpServerConfig) func(*ClientOptions) {
 	return func(o *ClientOptions) {
 		o.McpServers = servers
+	}
+}
+
+// =============================================================================
+// Tools Configuration Options
+// =============================================================================
+
+// WithToolsPreset sets tools configuration to use a preset.
+// Available presets: "claude_code" (standard Claude Code tools)
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithToolsPreset("claude_code"),
+//	)
+func WithToolsPreset(preset string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--tools", "preset:"+preset)
+	}
+}
+
+// WithClaudeCodeTools is a convenience option for enabling standard Claude Code tools.
+// Equivalent to WithToolsPreset("claude_code").
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithClaudeCodeTools(),
+//	)
+func WithClaudeCodeTools() ClientOption {
+	return WithToolsPreset("claude_code")
+}
+
+// WithDisallowedTools sets tools that Claude should not use.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithDisallowedTools("Write", "Edit"),
+//	)
+func WithDisallowedTools(tools ...string) ClientOption {
+	return func(o *ClientOptions) {
+		for _, tool := range tools {
+			o.CustomArgs = append(o.CustomArgs, "--disallowed-tools", tool)
+		}
+	}
+}
+
+// =============================================================================
+// Session Options
+// =============================================================================
+
+// WithContinue continues the most recent conversation.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithContinue(),
+//	)
+func WithContinue() ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--continue")
+	}
+}
+
+// WithResume resumes a specific session by ID.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithResume("session-uuid-here"),
+//	)
+func WithResume(sessionID string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--resume", sessionID)
+	}
+}
+
+// WithSystemPrompt sets the system prompt for the session.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithSystemPrompt("You are a helpful coding assistant."),
+//	)
+func WithSystemPrompt(prompt string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--system-prompt", prompt)
+	}
+}
+
+// WithAppendSystemPrompt appends to the system prompt.
+// This adds to the base prompt rather than replacing it.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithAppendSystemPrompt("Focus on Go development."),
+//	)
+func WithAppendSystemPrompt(prompt string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--append-system-prompt", prompt)
+	}
+}
+
+// =============================================================================
+// Limit Options
+// =============================================================================
+
+// WithMaxTurns limits the number of conversation turns.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithMaxTurns(10),
+//	)
+func WithMaxTurns(turns int) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--max-turns", fmt.Sprintf("%d", turns))
+	}
+}
+
+// WithMaxBudgetUSD sets a spending limit in USD.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithMaxBudgetUSD(5.00),
+//	)
+func WithMaxBudgetUSD(budget float64) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--max-budget-usd", fmt.Sprintf("%.2f", budget))
+	}
+}
+
+// WithMaxThinkingTokens limits the number of thinking tokens.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithMaxThinkingTokens(4096),
+//	)
+func WithMaxThinkingTokens(tokens int) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--max-thinking-tokens", fmt.Sprintf("%d", tokens))
+	}
+}
+
+// =============================================================================
+// Directory Options
+// =============================================================================
+
+// WithWorkingDirectory sets the working directory for the session.
+// The directory must be an absolute path.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithWorkingDirectory("/path/to/project"),
+//	)
+func WithWorkingDirectory(dir string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--cwd", dir)
+	}
+}
+
+// WithAdditionalDirectories adds directories that Claude can access.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithAdditionalDirectories("/path/to/lib", "/path/to/data"),
+//	)
+func WithAdditionalDirectories(dirs ...string) ClientOption {
+	return func(o *ClientOptions) {
+		for _, dir := range dirs {
+			o.CustomArgs = append(o.CustomArgs, "--add-dir", dir)
+		}
+	}
+}
+
+// =============================================================================
+// Agent Options
+// =============================================================================
+
+// WithAgent sets the agent to use for the session.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithAgent("code-review"),
+//	)
+func WithAgent(agent string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--agent", agent)
+	}
+}
+
+// =============================================================================
+// File Checkpointing
+// =============================================================================
+
+// WithFileCheckpointing enables file checkpointing for RewindFiles support.
+// When enabled, file changes are tracked and can be reverted using RewindFiles().
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithFileCheckpointing(),
+//	)
+func WithFileCheckpointing() ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--enable-file-checkpointing")
 	}
 }

@@ -105,14 +105,38 @@ type Receiver interface {
 
 // Controller handles runtime configuration.
 type Controller interface {
-	// Interrupt forcibly interrupts the current operation.
+	// Interrupt forcibly interrupts the current operation (process-level).
 	Interrupt() error
 
-	// SetModel sets the Claude model to use.
-	SetModel(model string)
+	// InterruptGraceful sends interrupt via control protocol (if active).
+	InterruptGraceful(ctx context.Context) error
 
-	// SetPermissionMode sets the permission mode for the session.
-	SetPermissionMode(mode string)
+	// SetModel changes the AI model during a streaming session.
+	// Pass nil to reset to the default model.
+	// Only works when control protocol is active (connected streaming session).
+	SetModel(ctx context.Context, model *string) error
+
+	// SetPermissionMode changes the permission mode during a streaming session.
+	// Valid modes: "default", "acceptEdits", "plan", "bypassPermissions", "delegate", "dontAsk"
+	// Only works when control protocol is active.
+	SetPermissionMode(ctx context.Context, mode string) error
+
+	// RewindFiles reverts tracked files to their state at a specific user message.
+	// The messageUUID should be the UUID from a UserMessage received during the session.
+	// Requires EnableFileCheckpointing option.
+	RewindFiles(ctx context.Context, messageUUID string) error
+
+	// GetStreamIssues returns validation issues found in the message stream.
+	GetStreamIssues() []shared.StreamIssue
+
+	// GetStreamStats returns statistics about the message stream.
+	GetStreamStats() shared.StreamStats
+
+	// GetServerInfo returns diagnostic information about the client connection.
+	GetServerInfo(ctx context.Context) (map[string]any, error)
+
+	// IsProtocolActive returns whether the control protocol is active.
+	IsProtocolActive() bool
 
 	// McpServerStatus returns MCP server statuses.
 	McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error)
@@ -123,8 +147,8 @@ type Controller interface {
 
 // ContextManager handles context file operations.
 type ContextManager interface {
-	// RewindFiles adds files to the context for the next query.
-	RewindFiles(ctx context.Context, files []string) error
+	// AddContextFiles adds files to the context for the next query.
+	AddContextFiles(ctx context.Context, files []string) error
 
 	// GetOptions returns a copy of the client options.
 	GetOptions() *ClientOptions

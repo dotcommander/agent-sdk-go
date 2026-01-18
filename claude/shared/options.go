@@ -2,6 +2,7 @@ package shared
 
 import (
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"os/exec"
@@ -393,8 +394,12 @@ type BaseOptions struct {
 	// Model specifies the Claude model to use.
 	Model string
 
-	// SystemPrompt sets the system prompt.
+	// SystemPrompt sets the system prompt. Replaces any existing system prompt.
 	SystemPrompt string
+
+	// AppendSystemPrompt appends to the system prompt.
+	// Useful for adding domain-specific instructions to the base prompt.
+	AppendSystemPrompt string
 
 	// AllowedTools restricts which tools Claude can use.
 	AllowedTools []string
@@ -499,6 +504,11 @@ type BaseOptions struct {
 
 	// ExtraArgs are additional CLI arguments.
 	ExtraArgs map[string]string
+
+	// DebugWriter specifies where to write debug output from the CLI subprocess.
+	// If nil (default), stderr is suppressed or isolated.
+	// Common values: os.Stderr, io.Discard, or a custom io.Writer.
+	DebugWriter io.Writer
 }
 
 // ToolsConfig is a discriminated union for tool configuration.
