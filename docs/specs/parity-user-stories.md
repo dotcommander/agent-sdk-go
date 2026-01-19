@@ -14,9 +14,9 @@ User stories for achieving full feature parity with severity1 SDK. Created from 
 
 | Priority | Completed | Total | Notes |
 |----------|-----------|-------|-------|
-| **P0 Critical** | 7/10 | 70% | Control protocol pending |
-| **P1 Important** | 15/17 | 88% | MCP routing pending |
-| **P2 Nice to Have** | 2/8 | 25% | Stubs exist |
+| **P0 Critical** | 10/10 | 100% | All complete |
+| **P1 Important** | 17/17 | 100% | All complete |
+| **P2 Nice to Have** | 5/8 | 63% | API stubs remain |
 
 ### Completion Summary
 
@@ -42,26 +42,28 @@ User stories for achieving full feature parity with severity1 SDK. Created from 
 - US-020: CreateSDKMcpServer
 - US-024: WithSandboxSettings
 - US-026: WithTypedPermissionMode
-- US-033: Option validation (in progress)
+- US-033: Option validation
 
-**❌ NOT IMPLEMENTED (Control protocol required):**
-- US-017: Hook callback routing
-- US-021: Control protocol infrastructure
-- US-022: Initialize handshake
-- US-023: MCP message routing
+**✅ COMPLETED (Control Protocol - subprocess package):**
+- US-017: Hook callback routing (control_hooks.go)
+- US-021: Control protocol infrastructure (control.go, control_types.go)
+- US-022: Initialize handshake (Protocol.Initialize)
+- US-023: MCP message routing (control_mcp.go)
+- US-032: RewindFiles (Protocol.RewindFiles)
 
-**⚠️ STUBS (API exists, transport pending):**
+**✅ COMPLETED (Error Types):**
+- US-035: Error type hierarchy (PermissionError, ModelError added)
+
+**⚠️ STUBS (API exists, need CLI support verification):**
 - US-027: SupportedCommands
 - US-028: SupportedModels
 - US-029: McpServerStatus
 - US-030: SetMcpServers
 - US-031: AccountInfo
-- US-032: RewindFiles
 
 **⚠️ PARTIAL:**
 - US-025: PluginConfig (basic struct exists)
 - US-034: Documentation parity (ongoing)
-- US-035: Error type hierarchy (basic types exist)
 
 ---
 
@@ -504,7 +506,7 @@ client, err := claude.NewClient(
 ---
 
 ### US-017: Hook Callback Routing via Control Protocol
-**Status:** Not wired (❌)
+**Status:** ✅ Completed (subprocess/control_hooks.go)
 **Priority:** P0
 
 **As a** SDK user
@@ -660,7 +662,7 @@ client, err := claude.NewClient(
 ## Category: Control Protocol
 
 ### US-021: Control Protocol Infrastructure
-**Status:** Missing (❌)
+**Status:** ✅ Completed (subprocess/control.go, control_types.go)
 **Priority:** P0
 
 **As a** SDK developer
@@ -711,7 +713,7 @@ client, err := claude.NewClient(
 ---
 
 ### US-022: Initialize Handshake
-**Status:** Missing (❌)
+**Status:** ✅ Completed (Protocol.Initialize in control.go)
 **Priority:** P0
 
 **As a** SDK
@@ -738,7 +740,7 @@ client, err := claude.NewClient(
 ---
 
 ### US-023: MCP Message Routing
-**Status:** Missing (❌)
+**Status:** ✅ Completed (subprocess/control_mcp.go)
 **Priority:** P1
 
 **As a** SDK
@@ -1037,7 +1039,7 @@ log.Printf("User: %s, Plan: %s, Tokens used: %d/%d",
 ---
 
 ### US-032: Rewind Files Implementation
-**Status:** Stub (⚠️)
+**Status:** ✅ Completed (Protocol.RewindFiles in control.go)
 **Priority:** P1
 
 **As a** SDK user
@@ -1131,7 +1133,7 @@ func ExampleWithAllowedTools() {
 ---
 
 ### US-035: Error Type Hierarchy
-**Status:** Enhancement
+**Status:** ✅ Completed (PermissionError, ModelError added)
 **Priority:** P2
 
 **As a** SDK user
