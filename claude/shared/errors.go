@@ -520,177 +520,85 @@ func Errorf(format string, args ...any) error {
 	return fmt.Errorf(format, args...)
 }
 
-// IsConnectionError checks if an error is a ConnectionError.
-func IsConnectionError(err error) bool {
-	_, ok := err.(*ConnectionError)
-	return ok
+// IsErrorType checks if err is of type T using errors.As.
+// This generic helper eliminates duplicate type checking functions.
+func IsErrorType[T error](err error) bool {
+	var target T
+	return errors.As(err, &target)
 }
+
+// AsErrorType extracts error of type T from err chain.
+// Returns the extracted error and true if found, zero value and false otherwise.
+func AsErrorType[T error](err error) (T, bool) {
+	var target T
+	ok := errors.As(err, &target)
+	return target, ok
+}
+
+// IsConnectionError checks if an error is a ConnectionError.
+func IsConnectionError(err error) bool { return IsErrorType[*ConnectionError](err) }
 
 // IsTimeoutError checks if an error is a TimeoutError.
-func IsTimeoutError(err error) bool {
-	_, ok := err.(*TimeoutError)
-	return ok
-}
+func IsTimeoutError(err error) bool { return IsErrorType[*TimeoutError](err) }
 
 // IsParserError checks if an error is a ParserError.
-func IsParserError(err error) bool {
-	_, ok := err.(*ParserError)
-	return ok
-}
+func IsParserError(err error) bool { return IsErrorType[*ParserError](err) }
 
 // IsProtocolError checks if an error is a ProtocolError.
-func IsProtocolError(err error) bool {
-	_, ok := err.(*ProtocolError)
-	return ok
-}
+func IsProtocolError(err error) bool { return IsErrorType[*ProtocolError](err) }
 
 // IsConfigurationError checks if an error is a ConfigurationError.
-func IsConfigurationError(err error) bool {
-	_, ok := err.(*ConfigurationError)
-	return ok
-}
+func IsConfigurationError(err error) bool { return IsErrorType[*ConfigurationError](err) }
 
 // IsProcessError checks if an error is a ProcessError.
-func IsProcessError(err error) bool {
-	_, ok := err.(*ProcessError)
-	return ok
-}
+func IsProcessError(err error) bool { return IsErrorType[*ProcessError](err) }
 
 // IsPermissionError checks if an error is a PermissionError.
-func IsPermissionError(err error) bool {
-	_, ok := err.(*PermissionError)
-	return ok
-}
+func IsPermissionError(err error) bool { return IsErrorType[*PermissionError](err) }
 
 // IsModelError checks if an error is a ModelError.
-func IsModelError(err error) bool {
-	_, ok := err.(*ModelError)
-	return ok
-}
+func IsModelError(err error) bool { return IsErrorType[*ModelError](err) }
 
-// As*Error extraction helpers - use errors.As for wrapped error support
+// As*Error extraction helpers - use AsErrorType generic for wrapped error support
 
 // AsCLINotFoundError extracts a CLINotFoundError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsCLINotFoundError(err error) (*CLINotFoundError, bool) {
-	var target *CLINotFoundError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsCLINotFoundError(err error) (*CLINotFoundError, bool) { return AsErrorType[*CLINotFoundError](err) }
 
 // AsConnectionError extracts a ConnectionError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsConnectionError(err error) (*ConnectionError, bool) {
-	var target *ConnectionError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsConnectionError(err error) (*ConnectionError, bool) { return AsErrorType[*ConnectionError](err) }
 
 // AsTimeoutError extracts a TimeoutError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsTimeoutError(err error) (*TimeoutError, bool) {
-	var target *TimeoutError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsTimeoutError(err error) (*TimeoutError, bool) { return AsErrorType[*TimeoutError](err) }
 
 // AsParserError extracts a ParserError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsParserError(err error) (*ParserError, bool) {
-	var target *ParserError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsParserError(err error) (*ParserError, bool) { return AsErrorType[*ParserError](err) }
 
 // AsProtocolError extracts a ProtocolError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsProtocolError(err error) (*ProtocolError, bool) {
-	var target *ProtocolError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsProtocolError(err error) (*ProtocolError, bool) { return AsErrorType[*ProtocolError](err) }
 
 // AsConfigurationError extracts a ConfigurationError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsConfigurationError(err error) (*ConfigurationError, bool) {
-	var target *ConfigurationError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsConfigurationError(err error) (*ConfigurationError, bool) { return AsErrorType[*ConfigurationError](err) }
 
 // AsProcessError extracts a ProcessError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsProcessError(err error) (*ProcessError, bool) {
-	var target *ProcessError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsProcessError(err error) (*ProcessError, bool) { return AsErrorType[*ProcessError](err) }
 
 // AsPermissionError extracts a PermissionError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsPermissionError(err error) (*PermissionError, bool) {
-	var target *PermissionError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsPermissionError(err error) (*PermissionError, bool) { return AsErrorType[*PermissionError](err) }
 
 // AsModelError extracts a ModelError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsModelError(err error) (*ModelError, bool) {
-	var target *ModelError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsModelError(err error) (*ModelError, bool) { return AsErrorType[*ModelError](err) }
 
 // IsJSONDecodeError checks if an error is a JSONDecodeError.
-func IsJSONDecodeError(err error) bool {
-	_, ok := err.(*JSONDecodeError)
-	return ok
-}
+func IsJSONDecodeError(err error) bool { return IsErrorType[*JSONDecodeError](err) }
 
 // AsJSONDecodeError extracts a JSONDecodeError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsJSONDecodeError(err error) (*JSONDecodeError, bool) {
-	var target *JSONDecodeError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsJSONDecodeError(err error) (*JSONDecodeError, bool) { return AsErrorType[*JSONDecodeError](err) }
 
 // IsMessageParseError checks if an error is a MessageParseError.
-func IsMessageParseError(err error) bool {
-	_, ok := err.(*MessageParseError)
-	return ok
-}
+func IsMessageParseError(err error) bool { return IsErrorType[*MessageParseError](err) }
 
 // AsMessageParseError extracts a MessageParseError from the error chain.
-// Returns the error and true if found, nil and false otherwise.
-func AsMessageParseError(err error) (*MessageParseError, bool) {
-	var target *MessageParseError
-	if errors.As(err, &target) {
-		return target, true
-	}
-	return nil, false
-}
+func AsMessageParseError(err error) (*MessageParseError, bool) { return AsErrorType[*MessageParseError](err) }
 
 // CircuitBreaker interface defines the contract for a circuit breaker pattern.
 // This is a stub implementation that can be completed later.

@@ -696,3 +696,169 @@ func TestModelErrorAsExtraction(t *testing.T) {
 		t.Error("AsModelError should return false for non-ModelError")
 	}
 }
+
+// TestIsErrorTypeGeneric tests the generic IsErrorType helper directly.
+func TestIsErrorTypeGeneric(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "ConnectionError direct",
+			err:  NewConnectionError("test", nil),
+			want: true,
+		},
+		{
+			name: "ConnectionError wrapped",
+			err:  errors.Join(errors.New("wrapper"), NewConnectionError("test", nil)),
+			want: true,
+		},
+		{
+			name: "wrong type",
+			err:  NewTimeoutError("op", "5s"),
+			want: false,
+		},
+		{
+			name: "plain error",
+			err:  errors.New("random"),
+			want: false,
+		},
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsErrorType[*ConnectionError](tt.err)
+			if got != tt.want {
+				t.Errorf("IsErrorType[*ConnectionError]() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestAsErrorTypeGeneric tests the generic AsErrorType helper directly.
+func TestAsErrorTypeGeneric(t *testing.T) {
+	t.Run("direct match", func(t *testing.T) {
+		orig := NewTimeoutError("query", "30s")
+		extracted, ok := AsErrorType[*TimeoutError](orig)
+		if !ok {
+			t.Error("AsErrorType should return true for matching type")
+		}
+		if extracted.Operation != "query" {
+			t.Errorf("Operation = %q, want %q", extracted.Operation, "query")
+		}
+		if extracted.Timeout != "30s" {
+			t.Errorf("Timeout = %q, want %q", extracted.Timeout, "30s")
+		}
+	})
+
+	t.Run("wrapped match", func(t *testing.T) {
+		orig := NewParserError(42, 10, "bad json", "unexpected token")
+		wrapped := errors.Join(errors.New("outer"), orig)
+		extracted, ok := AsErrorType[*ParserError](wrapped)
+		if !ok {
+			t.Error("AsErrorType should find error in wrapped chain")
+		}
+		if extracted.Line != 42 {
+			t.Errorf("Line = %d, want %d", extracted.Line, 42)
+		}
+	})
+
+	t.Run("no match", func(t *testing.T) {
+		err := errors.New("plain error")
+		extracted, ok := AsErrorType[*ProcessError](err)
+		if ok {
+			t.Error("AsErrorType should return false for non-matching type")
+		}
+		if extracted != nil {
+			t.Error("extracted should be nil when not found")
+		}
+	})
+
+	t.Run("nil error", func(t *testing.T) {
+		extracted, ok := AsErrorType[*ConfigurationError](nil)
+		if ok {
+			t.Error("AsErrorType should return false for nil error")
+		}
+		if extracted != nil {
+			t.Error("extracted should be nil for nil input")
+		}
+	})
+}
+
+// TestGenericHelpersMatchSpecificHelpers verifies generic helpers produce same results.
+func TestGenericHelpersMatchSpecificHelpers(t *testing.T) {
+	testCases := []error{
+		NewCLINotFoundError("/path", "cmd"),
+		NewConnectionError("reason", nil),
+		NewTimeoutError("op", "5s"),
+		NewParserError(1, 0, "", "reason"),
+		NewProtocolError("type", "reason"),
+		NewConfigurationError("field", "value", "reason"),
+		NewProcessError(123, "cmd", "reason", ""),
+		NewJSONDecodeError(1, 0, "reason", nil),
+		NewMessageParseError(nil, "type", "reason"),
+		NewPermissionError("tool", "path", "op", "reason"),
+		NewModelError("model", "reason", nil),
+		errors.New("plain error"),
+		nil,
+	}
+
+	for _, err := range testCases {
+		// Test Is* functions match
+		if IsConnectionError(err) != IsErrorType[*ConnectionError](err) {
+			t.Errorf("IsConnectionError mismatch for %T", err)
+		}
+		if IsTimeoutError(err) != IsErrorType[*TimeoutError](err) {
+			t.Errorf("IsTimeoutError mismatch for %T", err)
+		}
+		if IsParserError(err) != IsErrorType[*ParserError](err) {
+			t.Errorf("IsParserError mismatch for %T", err)
+		}
+		if IsProtocolError(err) != IsErrorType[*ProtocolError](err) {
+			t.Errorf("IsProtocolError mismatch for %T", err)
+		}
+		if IsConfigurationError(err) != IsErrorType[*ConfigurationError](err) {
+			t.Errorf("IsConfigurationError mismatch for %T", err)
+		}
+		if IsProcessError(err) != IsErrorType[*ProcessError](err) {
+			t.Errorf("IsProcessError mismatch for %T", err)
+		}
+		if IsPermissionError(err) != IsErrorType[*PermissionError](err) {
+			t.Errorf("IsPermissionError mismatch for %T", err)
+		}
+		if IsModelError(err) != IsErrorType[*ModelError](err) {
+			t.Errorf("IsModelError mismatch for %T", err)
+		}
+		if IsJSONDecodeError(err) != IsErrorType[*JSONDecodeError](err) {
+			t.Errorf("IsJSONDecodeError mismatch for %T", err)
+		}
+		if IsMessageParseError(err) != IsErrorType[*MessageParseError](err) {
+			t.Errorf("IsMessageParseError mismatch for %T", err)
+		}
+
+		// Test As* functions match
+		a1, ok1 := AsConnectionError(err)
+		a2, ok2 := AsErrorType[*ConnectionError](err)
+		if ok1 != ok2 || a1 != a2 {
+			t.Errorf("AsConnectionError mismatch for %T", err)
+		}
+
+		b1, ok1 := AsTimeoutError(err)
+		b2, ok2 := AsErrorType[*TimeoutError](err)
+		if ok1 != ok2 || b1 != b2 {
+			t.Errorf("AsTimeoutError mismatch for %T", err)
+		}
+
+		c1, ok1 := AsCLINotFoundError(err)
+		c2, ok2 := AsErrorType[*CLINotFoundError](err)
+		if ok1 != ok2 || c1 != c2 {
+			t.Errorf("AsCLINotFoundError mismatch for %T", err)
+		}
+	}
+}
