@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -62,11 +62,11 @@ func demonstrateStreamEventTypes() {
 	fmt.Println()
 
 	fmt.Println("1. message_start - Beginning of a message:")
-	messageStart := shared.StreamEvent{
+	messageStart := claude.StreamEvent{
 		UUID:      "msg-123",
 		SessionID: "session-abc",
 		Event: map[string]any{
-			"type": shared.StreamEventTypeMessageStart,
+			"type": claude.StreamEventTypeMessageStart,
 			"message": map[string]any{
 				"id":    "msg-123",
 				"role":  "assistant",
@@ -77,11 +77,11 @@ func demonstrateStreamEventTypes() {
 	printJSON("message_start", messageStart)
 
 	fmt.Println("2. content_block_start - Beginning of a content block:")
-	contentStart := shared.StreamEvent{
+	contentStart := claude.StreamEvent{
 		UUID:      "msg-123",
 		SessionID: "session-abc",
 		Event: map[string]any{
-			"type":  shared.StreamEventTypeContentBlockStart,
+			"type":  claude.StreamEventTypeContentBlockStart,
 			"index": 0,
 			"content_block": map[string]any{
 				"type": "text",
@@ -92,11 +92,11 @@ func demonstrateStreamEventTypes() {
 	printJSON("content_block_start", contentStart)
 
 	fmt.Println("3. content_block_delta - Incremental content update:")
-	contentDelta := shared.StreamEvent{
+	contentDelta := claude.StreamEvent{
 		UUID:      "msg-123",
 		SessionID: "session-abc",
 		Event: map[string]any{
-			"type":  shared.StreamEventTypeContentBlockDelta,
+			"type":  claude.StreamEventTypeContentBlockDelta,
 			"index": 0,
 			"delta": map[string]any{
 				"type": "text_delta",
@@ -107,22 +107,22 @@ func demonstrateStreamEventTypes() {
 	printJSON("content_block_delta", contentDelta)
 
 	fmt.Println("4. content_block_stop - End of a content block:")
-	contentStop := shared.StreamEvent{
+	contentStop := claude.StreamEvent{
 		UUID:      "msg-123",
 		SessionID: "session-abc",
 		Event: map[string]any{
-			"type":  shared.StreamEventTypeContentBlockStop,
+			"type":  claude.StreamEventTypeContentBlockStop,
 			"index": 0,
 		},
 	}
 	printJSON("content_block_stop", contentStop)
 
 	fmt.Println("5. message_delta - Message metadata update:")
-	messageDelta := shared.StreamEvent{
+	messageDelta := claude.StreamEvent{
 		UUID:      "msg-123",
 		SessionID: "session-abc",
 		Event: map[string]any{
-			"type": shared.StreamEventTypeMessageDelta,
+			"type": claude.StreamEventTypeMessageDelta,
 			"delta": map[string]any{
 				"stop_reason": "end_turn",
 			},
@@ -134,11 +134,11 @@ func demonstrateStreamEventTypes() {
 	printJSON("message_delta", messageDelta)
 
 	fmt.Println("6. message_stop - End of message:")
-	messageStop := shared.StreamEvent{
+	messageStop := claude.StreamEvent{
 		UUID:      "msg-123",
 		SessionID: "session-abc",
 		Event: map[string]any{
-			"type": shared.StreamEventTypeMessageStop,
+			"type": claude.StreamEventTypeMessageStop,
 		},
 	}
 	printJSON("message_stop", messageStop)
@@ -161,18 +161,18 @@ func demonstrateProcessingPatterns() {
       }
 
       // Check for stream events (partial messages)
-      if event, ok := msg.(*shared.StreamEvent); ok {
+      if event, ok := msg.(*claude.StreamEvent); ok {
           eventType := event.Event["type"].(string)
 
           switch eventType {
-          case shared.StreamEventTypeContentBlockDelta:
+          case claude.StreamEventTypeContentBlockDelta:
               delta := event.Event["delta"].(map[string]any)
               if text, ok := delta["text"].(string); ok {
                   fullText.WriteString(text)
                   fmt.Print(text) // Print as it arrives
               }
 
-          case shared.StreamEventTypeMessageStop:
+          case claude.StreamEventTypeMessageStop:
               fmt.Println("\n---Message Complete---")
           }
       }
@@ -187,15 +187,15 @@ func demonstrateProcessingPatterns() {
       blocks map[int]*strings.Builder
   }
 
-  func (c *ContentAccumulator) ProcessEvent(event *shared.StreamEvent) {
+  func (c *ContentAccumulator) ProcessEvent(event *claude.StreamEvent) {
       eventType := event.Event["type"].(string)
 
       switch eventType {
-      case shared.StreamEventTypeContentBlockStart:
+      case claude.StreamEventTypeContentBlockStart:
           index := int(event.Event["index"].(float64))
           c.blocks[index] = &strings.Builder{}
 
-      case shared.StreamEventTypeContentBlockDelta:
+      case claude.StreamEventTypeContentBlockDelta:
           index := int(event.Event["index"].(float64))
           delta := event.Event["delta"].(map[string]any)
           if text, ok := delta["text"].(string); ok {
@@ -214,8 +214,8 @@ func demonstrateProcessingPatterns() {
           break
       }
 
-      if event, ok := msg.(*shared.StreamEvent); ok {
-          if event.Event["type"] == shared.StreamEventTypeContentBlockStart {
+      if event, ok := msg.(*claude.StreamEvent); ok {
+          if event.Event["type"] == claude.StreamEventTypeContentBlockStart {
               block := event.Event["content_block"].(map[string]any)
               blockType := block["type"].(string)
 
@@ -249,8 +249,8 @@ func demonstrateUIIntegration() {
               return
           }
 
-          if event, ok := msg.(*shared.StreamEvent); ok {
-              if event.Event["type"] == shared.StreamEventTypeContentBlockDelta {
+          if event, ok := msg.(*claude.StreamEvent); ok {
+              if event.Event["type"] == claude.StreamEventTypeContentBlockDelta {
                   delta := event.Event["delta"].(map[string]any)
                   if text, ok := delta["text"].(string); ok {
                       uiUpdates <- text
@@ -285,23 +285,23 @@ func demonstrateUIIntegration() {
           break
       }
 
-      if event, ok := msg.(*shared.StreamEvent); ok {
+      if event, ok := msg.(*claude.StreamEvent); ok {
           switch event.Event["type"].(string) {
-          case shared.StreamEventTypeMessageStart:
+          case claude.StreamEventTypeMessageStart:
               progress.Started = true
               ui.ShowSpinner("Thinking...")
 
-          case shared.StreamEventTypeContentBlockStart:
+          case claude.StreamEventTypeContentBlockStart:
               progress.BlockCount++
               ui.UpdateStatus(fmt.Sprintf("Block %d", progress.BlockCount))
 
-          case shared.StreamEventTypeMessageDelta:
+          case claude.StreamEventTypeMessageDelta:
               if usage, ok := event.Event["usage"].(map[string]any); ok {
                   progress.TokenCount = int(usage["output_tokens"].(float64))
                   ui.UpdateStatus(fmt.Sprintf("%d tokens", progress.TokenCount))
               }
 
-          case shared.StreamEventTypeMessageStop:
+          case claude.StreamEventTypeMessageStop:
               progress.Complete = true
               ui.HideSpinner()
           }

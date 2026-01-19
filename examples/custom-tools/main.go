@@ -23,7 +23,6 @@ import (
 	"github.com/dotcommander/agent-sdk-go/claude"
 	"github.com/dotcommander/agent-sdk-go/claude/cli"
 	"github.com/dotcommander/agent-sdk-go/claude/mcp"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 // WeatherTool demonstrates a custom tool that fetches weather data.
@@ -263,7 +262,7 @@ func main() {
 	fmt.Println()
 
 	// Configure client with MCP servers
-	servers := map[string]shared.McpServerConfig{
+	servers := map[string]claude.McpServerConfig{
 		"tools": serverConfig,
 	}
 
@@ -378,7 +377,7 @@ func runInteractiveDemo(ctx context.Context, client claude.Client) {
 				fmt.Println("\nStream ended")
 				return
 			}
-			if text := shared.GetContentText(msg); text != "" {
+			if text := claude.GetContentText(msg); text != "" {
 				fmt.Print(text)
 			}
 		case err := <-errChan:

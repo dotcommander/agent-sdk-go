@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -88,7 +88,7 @@ func demonstrateStreamValidation() {
 	fmt.Println()
 
 	// Create a sample validator and show its stats
-	validator := shared.NewStreamValidator()
+	validator := claude.NewStreamValidator()
 	stats := validator.GetStats()
 
 	fmt.Println("Stream validation detects issues like:")
@@ -101,7 +101,7 @@ func demonstrateStreamValidation() {
 
 	fmt.Println("Tracking messages with the validator:")
 	fmt.Println(`
-  validator := shared.NewStreamValidator()
+  validator := claude.NewStreamValidator()
 
   // Track each message from the stream
   iter := client.ReceiveResponseIterator(ctx)
@@ -134,7 +134,7 @@ func demonstrateStreamStats() {
 	fmt.Println()
 
 	// Get stats from a validator
-	validator := shared.NewStreamValidator()
+	validator := claude.NewStreamValidator()
 	stats := validator.GetStats()
 
 	printJSON("Stream Stats", stats)
@@ -222,8 +222,8 @@ func demonstrateDiagnosticPatterns() {
           break
       }
 
-      if event, ok := msg.(*shared.StreamEvent); ok {
-          if event.Event["type"] == shared.StreamEventTypeContentBlockDelta {
+      if event, ok := msg.(*claude.StreamEvent); ok {
+          if event.Event["type"] == claude.StreamEventTypeContentBlockDelta {
               if tokenCount == 0 {
                   firstTokenTime = time.Now()
                   fmt.Printf("Time to first token: %v\n", firstTokenTime.Sub(startTime))

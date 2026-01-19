@@ -9,7 +9,7 @@
 package claude
 
 import (
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // SDKError is the base interface for all Claude Agent SDK errors.
@@ -471,3 +471,80 @@ const (
 	// ControlResponseSubtypeError indicates the request failed.
 	ControlResponseSubtypeError = "error"
 )
+
+// =============================================================================
+// Stream Event Types
+// =============================================================================
+
+// Stream event type constants for partial streaming.
+const (
+	StreamEventTypeContentBlockStart = shared.StreamEventTypeContentBlockStart
+	StreamEventTypeContentBlockDelta = shared.StreamEventTypeContentBlockDelta
+	StreamEventTypeContentBlockStop  = shared.StreamEventTypeContentBlockStop
+	StreamEventTypeMessageStart      = shared.StreamEventTypeMessageStart
+	StreamEventTypeMessageDelta      = shared.StreamEventTypeMessageDelta
+	StreamEventTypeMessageStop       = shared.StreamEventTypeMessageStop
+)
+
+// StreamEvent is already exported in types.go
+
+// =============================================================================
+// MCP Server Config Types
+// =============================================================================
+
+// McpStdioServerConfig configures an MCP server using stdio.
+type McpStdioServerConfig = shared.McpStdioServerConfig
+
+// McpSSEServerConfig configures an MCP server using Server-Sent Events.
+type McpSSEServerConfig = shared.McpSSEServerConfig
+
+// McpHttpServerConfig configures an MCP server using HTTP.
+type McpHttpServerConfig = shared.McpHttpServerConfig
+
+// =============================================================================
+// Additional Permission Types
+// =============================================================================
+
+// PermissionBehavior determines how a permission request is handled.
+type PermissionBehavior = shared.PermissionBehavior
+
+// =============================================================================
+// Additional Hook Types
+// =============================================================================
+
+// AsyncHookOutput indicates an async hook response.
+type AsyncHookOutput = shared.AsyncHookOutput
+
+// =============================================================================
+// Model Utilities
+// =============================================================================
+
+// ResolveModelName resolves a short model name to its full model ID.
+var ResolveModelName = shared.ResolveModelName
+
+// =============================================================================
+// Circuit Breaker (for error handling patterns)
+// =============================================================================
+
+// CircuitBreakerConfig holds configuration for a circuit breaker.
+type CircuitBreakerConfig = shared.CircuitBreakerConfig
+
+// StubCircuitBreaker is a simple circuit breaker for demonstration.
+type StubCircuitBreaker = shared.StubCircuitBreaker
+
+// NewStubCircuitBreaker creates a new stub circuit breaker.
+var NewStubCircuitBreaker = shared.NewStubCircuitBreaker
+
+// =============================================================================
+// Process Error Type
+// =============================================================================
+
+// ProcessError is already exported as a function in types.go
+// Note: types.go exports a function ProcessError(), not the type.
+// The type is shared.ProcessError which is accessible via exports.
+
+// NewProcessError creates a new ProcessError (alias for types.ProcessError function).
+// Note: Already exported as ProcessError() in types.go
+
+// IsProcessError checks if an error is a ProcessError.
+var IsProcessError = shared.IsProcessError

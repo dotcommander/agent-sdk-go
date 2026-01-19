@@ -2,7 +2,7 @@
 package claude
 
 import (
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // extractSdkMcpServers extracts SDK MCP server instances from server configurations.

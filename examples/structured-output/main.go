@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -186,7 +186,7 @@ func demonstrateGoStructs() {
   }
 
   // Generate schema from struct (using reflection)
-  schema := shared.SchemaFromStruct(AnalysisResult{})
+  schema := claude.SchemaFromStruct(AnalysisResult{})
 
   // Or define schema manually for more control
   schema := map[string]any{
@@ -237,7 +237,7 @@ func demonstrateParsingPatterns() {
           break
       }
 
-      if result, ok := msg.(*shared.ResultMessage); ok {
+      if result, ok := msg.(*claude.ResultMessage); ok {
           var sentiment SentimentResult
           // StructuredOutput contains the parsed JSON
           data, _ := json.Marshal(result.StructuredOutput)
@@ -270,7 +270,7 @@ func demonstrateParsingPatterns() {
 
 	fmt.Println("3. Validation wrapper:")
 	fmt.Print(`
-  func ParseStructuredOutput[T any](result *shared.ResultMessage) (*T, error) {
+  func ParseStructuredOutput[T any](result *claude.ResultMessage) (*T, error) {
       if result.StructuredOutput == nil {
           return nil, fmt.Errorf("no structured output in result")
       }
@@ -306,5 +306,5 @@ func printJSON(label string, v any) {
 
 // Ensure imports are used
 func init() {
-	_ = shared.PermissionModeDefault
+	_ = claude.PermissionModeDefault
 }

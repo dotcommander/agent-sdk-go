@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 func TestParserParseUserMessage(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // V2Message represents any message in the V2 protocol.

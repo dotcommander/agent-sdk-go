@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -46,10 +46,10 @@ func demonstrateBasicAgent() {
 
 	// Note: AgentDefinition uses Description, Prompt, and Model (not Name)
 	// The agent is registered by key in the Agents map
-	agent := shared.AgentDefinition{
+	agent := claude.AgentDefinition{
 		Description: "Reviews code for quality, security, and best practices",
 		Prompt:      "You are a senior code reviewer. Focus on security, performance, and maintainability.",
-		Model:       shared.AgentModelSonnet,
+		Model:       claude.AgentModelSonnet,
 	}
 
 	printJSON("Agent Definition", agent)
@@ -57,7 +57,7 @@ func demonstrateBasicAgent() {
 	fmt.Println(`
   // Register with client using a map (key becomes the agent name)
   client, err := claude.NewClient(
-      claude.WithAgents(map[string]shared.AgentDefinition{
+      claude.WithAgents(map[string]claude.AgentDefinition{
           "code-reviewer": agent,
       }),
   )
@@ -72,21 +72,21 @@ func demonstrateAgentModels() {
 	fmt.Println()
 
 	fmt.Println("1. Using model aliases (recommended):")
-	agents := map[string]shared.AgentDefinition{
+	agents := map[string]claude.AgentDefinition{
 		"research-agent": {
 			Description: "Performs deep research and analysis",
 			Prompt:      "You are a research specialist. Be thorough and cite sources.",
-			Model:       shared.AgentModelOpus, // Use Opus for complex reasoning
+			Model:       claude.AgentModelOpus, // Use Opus for complex reasoning
 		},
 		"quick-lookup": {
 			Description: "Fast lookups and simple queries",
 			Prompt:      "Provide quick, concise answers.",
-			Model:       shared.AgentModelHaiku, // Use Haiku for speed
+			Model:       claude.AgentModelHaiku, // Use Haiku for speed
 		},
 		"balanced-agent": {
 			Description: "General purpose agent",
 			Prompt:      "Help with various tasks effectively.",
-			Model:       shared.AgentModelSonnet, // Default balanced choice
+			Model:       claude.AgentModelSonnet, // Default balanced choice
 		},
 	}
 
@@ -109,29 +109,29 @@ func demonstrateToolRestrictions() {
 	fmt.Println()
 
 	fmt.Println("1. Read-only agent:")
-	readOnlyAgent := shared.AgentDefinition{
+	readOnlyAgent := claude.AgentDefinition{
 		Description:     "Can only read files, not modify",
 		Prompt:          "Analyze code without making changes.",
 		Tools:           []string{"Read", "Glob", "Grep", "LSP"},
-		Model:           shared.AgentModelSonnet,
+		Model:           claude.AgentModelSonnet,
 	}
 	printJSON("Read-Only Agent", readOnlyAgent)
 
 	fmt.Println("2. No-bash agent:")
-	noBashAgent := shared.AgentDefinition{
+	noBashAgent := claude.AgentDefinition{
 		Description:     "Cannot execute shell commands",
 		Prompt:          "Work without shell access for safety.",
 		DisallowedTools: []string{"Bash", "KillShell"},
-		Model:           shared.AgentModelSonnet,
+		Model:           claude.AgentModelSonnet,
 	}
 	printJSON("No-Bash Agent", noBashAgent)
 
 	fmt.Println("3. Minimal tools agent:")
-	minimalAgent := shared.AgentDefinition{
+	minimalAgent := claude.AgentDefinition{
 		Description: "Only uses specific tools",
 		Prompt:      "Focus on file editing tasks only.",
 		Tools:       []string{"Read", "Edit", "Write"},
-		Model:       shared.AgentModelSonnet,
+		Model:       claude.AgentModelSonnet,
 	}
 	printJSON("Minimal Tools Agent", minimalAgent)
 
@@ -145,28 +145,28 @@ func demonstrateAgentHierarchies() {
 	fmt.Println("--- Agent Hierarchies ---")
 	fmt.Println()
 
-	agents := map[string]shared.AgentDefinition{
+	agents := map[string]claude.AgentDefinition{
 		"orchestrator": {
 			Description: "Coordinates complex tasks by delegating to specialist agents",
 			Prompt:      "You are a project manager. Delegate tasks to appropriate specialists.",
-			Model:       shared.AgentModelOpus,
+			Model:       claude.AgentModelOpus,
 		},
 		"frontend-dev": {
 			Description: "Specializes in React, TypeScript, and CSS",
 			Prompt:      "You are a frontend specialist. Focus on UI/UX and client-side code.",
-			Model:       shared.AgentModelSonnet,
+			Model:       claude.AgentModelSonnet,
 			Tools:       []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash"},
 		},
 		"backend-dev": {
 			Description: "Specializes in Go, databases, and APIs",
 			Prompt:      "You are a backend specialist. Focus on server-side code and APIs.",
-			Model:       shared.AgentModelSonnet,
+			Model:       claude.AgentModelSonnet,
 			Tools:       []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash", "LSP"},
 		},
 		"tester": {
 			Description: "Writes and runs tests",
 			Prompt:      "You are a QA specialist. Write thorough tests and verify behavior.",
-			Model:       shared.AgentModelSonnet,
+			Model:       claude.AgentModelSonnet,
 			Tools:       []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash"},
 		},
 	}
@@ -197,17 +197,17 @@ func demonstratePracticalPatterns() {
 
 	fmt.Println("1. Security Review Pipeline:")
 	fmt.Println(`
-  agents := map[string]shared.AgentDefinition{
+  agents := map[string]claude.AgentDefinition{
       "security-scanner": {
           Description: "Scans code for security vulnerabilities",
           Prompt:      "Focus on OWASP top 10 and common security issues.",
-          Model:       shared.AgentModelSonnet,
+          Model:       claude.AgentModelSonnet,
           Tools:       []string{"Read", "Glob", "Grep"}, // Read-only
       },
       "security-fixer": {
           Description: "Fixes identified security issues",
           Prompt:      "Apply secure coding practices when fixing issues.",
-          Model:       shared.AgentModelOpus,
+          Model:       claude.AgentModelOpus,
           Tools:       []string{"Read", "Write", "Edit", "Glob", "Grep"},
       },
   }
@@ -215,17 +215,17 @@ func demonstratePracticalPatterns() {
 
 	fmt.Println("2. Documentation Generator:")
 	fmt.Println(`
-  agents := map[string]shared.AgentDefinition{
+  agents := map[string]claude.AgentDefinition{
       "code-analyzer": {
           Description: "Analyzes code structure and extracts documentation",
           Prompt:      "Extract function signatures, types, and patterns.",
-          Model:       shared.AgentModelHaiku, // Fast analysis
+          Model:       claude.AgentModelHaiku, // Fast analysis
           Tools:       []string{"Read", "Glob", "Grep", "LSP"},
       },
       "doc-writer": {
           Description: "Writes comprehensive documentation",
           Prompt:      "Write clear, comprehensive docs with examples.",
-          Model:       shared.AgentModelSonnet,
+          Model:       claude.AgentModelSonnet,
           Tools:       []string{"Read", "Write", "Edit"},
       },
   }
@@ -233,21 +233,21 @@ func demonstratePracticalPatterns() {
 
 	fmt.Println("3. Test-Driven Development:")
 	fmt.Println(`
-  agents := map[string]shared.AgentDefinition{
+  agents := map[string]claude.AgentDefinition{
       "test-writer": {
           Description: "Writes tests for specified functionality",
           Prompt:      "Write failing tests first (red phase).",
-          Model:       shared.AgentModelSonnet,
+          Model:       claude.AgentModelSonnet,
       },
       "implementer": {
           Description: "Implements code to pass the tests",
           Prompt:      "Write minimal code to pass tests (green phase).",
-          Model:       shared.AgentModelSonnet,
+          Model:       claude.AgentModelSonnet,
       },
       "refactorer": {
           Description: "Refactors passing code for quality",
           Prompt:      "Improve code quality while keeping tests green (refactor phase).",
-          Model:       shared.AgentModelOpus, // Complex reasoning
+          Model:       claude.AgentModelOpus, // Complex reasoning
       },
   }
 

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 	"github.com/dotcommander/agent-sdk-go/claude/subprocess"
 )
 

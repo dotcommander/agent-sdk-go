@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -43,7 +43,7 @@ func demonstrateBasicSandbox() {
 	fmt.Println()
 
 	// The actual SandboxSettings struct
-	sandbox := shared.SandboxSettings{
+	sandbox := claude.SandboxSettings{
 		Enabled:    true,
 		Type:       "docker",
 		Image:      "claude-sandbox:latest",
@@ -71,7 +71,7 @@ func demonstrateSandboxTypes() {
 	fmt.Println()
 
 	fmt.Println("1. Docker sandbox:")
-	dockerSandbox := shared.SandboxSettings{
+	dockerSandbox := claude.SandboxSettings{
 		Enabled: true,
 		Type:    "docker",
 		Image:   "claude-sandbox:latest",
@@ -86,7 +86,7 @@ func demonstrateSandboxTypes() {
 	printJSON("Docker Sandbox", dockerSandbox)
 
 	fmt.Println("2. nsjail sandbox:")
-	nsjailSandbox := shared.SandboxSettings{
+	nsjailSandbox := claude.SandboxSettings{
 		Enabled: true,
 		Type:    "nsjail",
 		Options: map[string]string{
@@ -99,7 +99,7 @@ func demonstrateSandboxTypes() {
 	printJSON("nsjail Sandbox", nsjailSandbox)
 
 	fmt.Println("3. Custom sandbox:")
-	customSandbox := shared.SandboxSettings{
+	customSandbox := claude.SandboxSettings{
 		Enabled: true,
 		Type:    "custom",
 		Options: map[string]string{
@@ -118,25 +118,25 @@ func demonstrateHookBasedSecurity() {
 	fmt.Println("Use PreToolUse hooks for fine-grained security control:")
 	fmt.Println(`
   // Block dangerous operations via hooks
-  hooks := map[shared.HookEvent][]shared.HookConfig{
-      shared.HookEventPreToolUse: {
+  hooks := map[claude.HookEvent][]claude.HookConfig{
+      claude.HookEventPreToolUse: {
           {
               Matcher: "Bash",
-              Handler: func(ctx context.Context, input *shared.PreToolUseHookInput) (*shared.SyncHookOutput, error) {
+              Handler: func(ctx context.Context, input *claude.PreToolUseHookInput) (*claude.SyncHookOutput, error) {
                   cmd := input.ToolInput["command"].(string)
 
                   // Block dangerous commands
                   dangerous := []string{"rm -rf", "sudo", "chmod 777", "> /dev"}
                   for _, d := range dangerous {
                       if strings.Contains(cmd, d) {
-                          return &shared.SyncHookOutput{
+                          return &claude.SyncHookOutput{
                               Decision:   "block",
                               StopReason: "Dangerous command blocked",
                           }, nil
                       }
                   }
 
-                  return &shared.SyncHookOutput{Continue: true}, nil
+                  return &claude.SyncHookOutput{Continue: true}, nil
               },
           },
       },
@@ -145,11 +145,11 @@ func demonstrateHookBasedSecurity() {
 
 	fmt.Println("Restrict file access via hooks:")
 	fmt.Println(`
-  hooks := map[shared.HookEvent][]shared.HookConfig{
-      shared.HookEventPreToolUse: {
+  hooks := map[claude.HookEvent][]claude.HookConfig{
+      claude.HookEventPreToolUse: {
           {
               Matcher: "Read|Write|Edit",
-              Handler: func(ctx context.Context, input *shared.PreToolUseHookInput) (*shared.SyncHookOutput, error) {
+              Handler: func(ctx context.Context, input *claude.PreToolUseHookInput) (*claude.SyncHookOutput, error) {
                   path := input.ToolInput["file_path"].(string)
                   allowedPaths := []string{"/home/user/project", "/tmp"}
 
@@ -162,13 +162,13 @@ func demonstrateHookBasedSecurity() {
                   }
 
                   if !allowed {
-                      return &shared.SyncHookOutput{
+                      return &claude.SyncHookOutput{
                           Decision:   "block",
                           StopReason: fmt.Sprintf("Access denied: %s", path),
                       }, nil
                   }
 
-                  return &shared.SyncHookOutput{Continue: true}, nil
+                  return &claude.SyncHookOutput{Continue: true}, nil
               },
           },
       },
@@ -184,7 +184,7 @@ func demonstrateSecurityPatterns() {
 	fmt.Println("1. Defense in depth:")
 	fmt.Println(`
   // Layer 1: Sandbox container
-  sandbox := shared.SandboxSettings{
+  sandbox := claude.SandboxSettings{
       Enabled: true,
       Type:    "docker",
       Options: map[string]string{
@@ -196,7 +196,7 @@ func demonstrateSecurityPatterns() {
   hooks := createSecurityHooks()
 
   // Layer 3: Permission mode
-  permissionMode := shared.PermissionModeDefault
+  permissionMode := claude.PermissionModeDefault
 
   // Layer 4: Tool restrictions
   disallowedTools := []string{"Bash"}
@@ -211,8 +211,8 @@ func demonstrateSecurityPatterns() {
 
 	fmt.Println("2. Environment-based security:")
 	fmt.Println(`
-  func getSandbox(env string) shared.SandboxSettings {
-      base := shared.SandboxSettings{
+  func getSandbox(env string) claude.SandboxSettings {
+      base := claude.SandboxSettings{
           Enabled: true,
           Type:    "docker",
       }
@@ -244,31 +244,31 @@ func demonstrateSecurityPatterns() {
 	fmt.Println("3. Audit logging:")
 	fmt.Println(`
   // Log all tool usage for security audit
-  hooks := map[shared.HookEvent][]shared.HookConfig{
-      shared.HookEventPostToolUse: {
+  hooks := map[claude.HookEvent][]claude.HookConfig{
+      claude.HookEventPostToolUse: {
           {
               Matcher: "",  // Match all tools
-              Handler: func(ctx context.Context, input *shared.PostToolUseHookInput) (*shared.SyncHookOutput, error) {
+              Handler: func(ctx context.Context, input *claude.PostToolUseHookInput) (*claude.SyncHookOutput, error) {
                   // Log to audit trail
                   auditLog.Info("tool_executed",
                       "tool", input.ToolName,
                       "session", input.SessionID,
                       "input", input.ToolInput,
                   )
-                  return &shared.SyncHookOutput{Continue: true}, nil
+                  return &claude.SyncHookOutput{Continue: true}, nil
               },
           },
       },
-      shared.HookEventPostToolUseFailure: {
+      claude.HookEventPostToolUseFailure: {
           {
               Matcher: "",
-              Handler: func(ctx context.Context, input *shared.PostToolUseFailureHookInput) (*shared.SyncHookOutput, error) {
+              Handler: func(ctx context.Context, input *claude.PostToolUseFailureHookInput) (*claude.SyncHookOutput, error) {
                   // Log failures
                   auditLog.Warn("tool_failed",
                       "tool", input.ToolName,
                       "error", input.Error,
                   )
-                  return &shared.SyncHookOutput{Continue: true}, nil
+                  return &claude.SyncHookOutput{Continue: true}, nil
               },
           },
       },

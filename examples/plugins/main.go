@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func demonstrateBasicPlugins() {
 	fmt.Println()
 
 	// The actual PluginConfig struct uses Type and Path
-	plugin := shared.PluginConfig{
+	plugin := claude.PluginConfig{
 		Type: "local",
 		Path: "/path/to/code-analysis-plugin",
 	}
@@ -52,7 +52,7 @@ func demonstrateBasicPlugins() {
 	fmt.Println(`
   // Register plugins with client
   client, err := claude.NewClient(
-      claude.WithPlugins([]shared.PluginConfig{plugin}),
+      claude.WithPlugins([]claude.PluginConfig{plugin}),
   )
 `)
 }
@@ -63,14 +63,14 @@ func demonstratePluginOptions() {
 	fmt.Println()
 
 	fmt.Println("1. Local plugin:")
-	localPlugin := shared.PluginConfig{
+	localPlugin := claude.PluginConfig{
 		Type: "local",
 		Path: "/home/user/plugins/my-plugin",
 	}
 	printJSON("Local Plugin", localPlugin)
 
 	fmt.Println("2. Multiple local plugins:")
-	plugins := []shared.PluginConfig{
+	plugins := []claude.PluginConfig{
 		{Type: "local", Path: "/plugins/security-scanner"},
 		{Type: "local", Path: "/plugins/code-formatter"},
 		{Type: "local", Path: "/plugins/documentation-generator"},
@@ -86,7 +86,7 @@ func demonstrateMultiplePlugins() {
 	fmt.Println("--- Multiple Plugins ---")
 	fmt.Println()
 
-	plugins := []shared.PluginConfig{
+	plugins := []claude.PluginConfig{
 		{Type: "local", Path: "/plugins/security-scanner"},
 		{Type: "local", Path: "/plugins/code-formatter"},
 		{Type: "local", Path: "/plugins/documentation-generator"},
@@ -114,21 +114,21 @@ func demonstratePluginPatterns() {
 
 	fmt.Println("1. Environment-aware plugins:")
 	fmt.Println(`
-  func getPlugins(env string) []shared.PluginConfig {
-      base := []shared.PluginConfig{
+  func getPlugins(env string) []claude.PluginConfig {
+      base := []claude.PluginConfig{
           {Type: "local", Path: "/plugins/logging"},
           {Type: "local", Path: "/plugins/metrics"},
       }
 
       if env == "development" {
-          base = append(base, shared.PluginConfig{
+          base = append(base, claude.PluginConfig{
               Type: "local",
               Path: "/plugins/debug-tools",
           })
       }
 
       if env == "production" {
-          base = append(base, shared.PluginConfig{
+          base = append(base, claude.PluginConfig{
               Type: "local",
               Path: "/plugins/performance-monitor",
           })
@@ -140,16 +140,16 @@ func demonstratePluginPatterns() {
 
 	fmt.Println("2. Plugin discovery from directory:")
 	fmt.Println(`
-  func discoverPlugins(dir string) ([]shared.PluginConfig, error) {
+  func discoverPlugins(dir string) ([]claude.PluginConfig, error) {
       entries, err := os.ReadDir(dir)
       if err != nil {
           return nil, err
       }
 
-      var plugins []shared.PluginConfig
+      var plugins []claude.PluginConfig
       for _, entry := range entries {
           if entry.IsDir() {
-              plugins = append(plugins, shared.PluginConfig{
+              plugins = append(plugins, claude.PluginConfig{
                   Type: "local",
                   Path: filepath.Join(dir, entry.Name()),
               })
@@ -173,14 +173,14 @@ func demonstratePluginPatterns() {
   //   ]
   // }
 
-  func loadPluginConfig(path string) ([]shared.PluginConfig, error) {
+  func loadPluginConfig(path string) ([]claude.PluginConfig, error) {
       data, err := os.ReadFile(path)
       if err != nil {
           return nil, err
       }
 
       var config struct {
-          Plugins []shared.PluginConfig ` + "`json:\"plugins\"`" + `
+          Plugins []claude.PluginConfig ` + "`json:\"plugins\"`" + `
       }
       if err := json.Unmarshal(data, &config); err != nil {
           return nil, err

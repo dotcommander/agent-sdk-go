@@ -3,7 +3,7 @@ package claude
 import (
 	"context"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // ClientFactory creates Client instances.

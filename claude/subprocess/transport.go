@@ -22,7 +22,7 @@ import (
 	"github.com/dotcommander/agent-sdk-go/claude/cli"
 	"github.com/dotcommander/agent-sdk-go/claude/mcp"
 	"github.com/dotcommander/agent-sdk-go/claude/parser"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 const (

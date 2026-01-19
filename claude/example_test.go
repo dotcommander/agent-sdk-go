@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dotcommander/agent-sdk-go/claude"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // ExampleNewClient demonstrates creating a basic Claude client.

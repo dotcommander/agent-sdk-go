@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -63,7 +63,7 @@ func demonstrateCapturingUUIDs() {
 	fmt.Println()
 
 	// Simulated user message with UUID
-	userMsg := shared.UserMessage{
+	userMsg := claude.UserMessage{
 		MessageType: "user",
 		Content:     "Please refactor the authentication module",
 		UUID:        stringPtr("msg-uuid-abc123"),
@@ -83,7 +83,7 @@ func demonstrateCapturingUUIDs() {
       }
 
       // Capture UUID from user messages
-      if userMsg, ok := msg.(*shared.UserMessage); ok && userMsg.UUID != nil {
+      if userMsg, ok := msg.(*claude.UserMessage); ok && userMsg.UUID != nil {
           checkpointUUID = *userMsg.UUID
           fmt.Printf("Checkpoint created: %s\n", checkpointUUID)
       }

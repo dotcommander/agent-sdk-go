@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // DefaultClientOptions returns default options for the Claude client.

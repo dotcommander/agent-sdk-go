@@ -13,7 +13,6 @@ import (
 
 	"github.com/dotcommander/agent-sdk-go/claude"
 	"github.com/dotcommander/agent-sdk-go/claude/mcp"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 func main() {
@@ -80,7 +79,7 @@ func main() {
 	serverConfig := calculatorServer.ToConfig()
 
 	// Configure client options with MCP servers
-	servers := map[string]shared.McpServerConfig{
+	servers := map[string]claude.McpServerConfig{
 		"calc": serverConfig,
 	}
 

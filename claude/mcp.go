@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // McpToolHandler is the function signature for tool handlers.

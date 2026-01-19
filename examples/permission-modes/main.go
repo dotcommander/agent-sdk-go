@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -50,37 +50,37 @@ func demonstratePermissionModes() {
 	fmt.Println()
 
 	modes := []struct {
-		mode        shared.PermissionMode
+		mode        claude.PermissionMode
 		description string
 		useCase     string
 	}{
 		{
-			mode:        shared.PermissionModeDefault,
+			mode:        claude.PermissionModeDefault,
 			description: "Standard permission checking with prompts",
 			useCase:     "Interactive sessions where user approves actions",
 		},
 		{
-			mode:        shared.PermissionModeAcceptEdits,
+			mode:        claude.PermissionModeAcceptEdits,
 			description: "Automatically accept file edits, prompt for others",
 			useCase:     "Coding assistants where edits are expected",
 		},
 		{
-			mode:        shared.PermissionModeBypassPermissions,
+			mode:        claude.PermissionModeBypassPermissions,
 			description: "Skip all permission checks",
 			useCase:     "Fully automated pipelines, CI/CD environments",
 		},
 		{
-			mode:        shared.PermissionModePlan,
+			mode:        claude.PermissionModePlan,
 			description: "Plan mode - no execution, only planning",
 			useCase:     "Reviewing proposed changes before execution",
 		},
 		{
-			mode:        shared.PermissionModeDelegate,
+			mode:        claude.PermissionModeDelegate,
 			description: "Delegate permission decisions to hooks",
 			useCase:     "Custom permission logic via PreToolUse hooks",
 		},
 		{
-			mode:        shared.PermissionModeDontAsk,
+			mode:        claude.PermissionModeDontAsk,
 			description: "Never prompt, deny if not pre-approved",
 			useCase:     "Headless automation with pre-configured rules",
 		},
@@ -100,19 +100,19 @@ func demonstratePermissionBehaviors() {
 	fmt.Println()
 
 	behaviors := []struct {
-		behavior    shared.PermissionBehavior
+		behavior    claude.PermissionBehavior
 		description string
 	}{
 		{
-			behavior:    shared.PermissionBehaviorAllow,
+			behavior:    claude.PermissionBehaviorAllow,
 			description: "Allow the tool to execute without prompting",
 		},
 		{
-			behavior:    shared.PermissionBehaviorDeny,
+			behavior:    claude.PermissionBehaviorDeny,
 			description: "Deny the tool execution",
 		},
 		{
-			behavior:    shared.PermissionBehaviorAsk,
+			behavior:    claude.PermissionBehaviorAsk,
 			description: "Prompt the user for permission",
 		},
 	}
@@ -129,32 +129,32 @@ func demonstratePermissionDestinations() {
 	fmt.Println()
 
 	destinations := []struct {
-		dest        shared.PermissionUpdateDestination
+		dest        claude.PermissionUpdateDestination
 		description string
 		persistence string
 	}{
 		{
-			dest:        shared.PermissionDestUserSettings,
+			dest:        claude.PermissionDestUserSettings,
 			description: "User-level settings (~/.claude/settings.json)",
 			persistence: "Persists across all sessions and projects",
 		},
 		{
-			dest:        shared.PermissionDestProjectSettings,
+			dest:        claude.PermissionDestProjectSettings,
 			description: "Project-level settings (.claude/settings.json)",
 			persistence: "Persists for this project only",
 		},
 		{
-			dest:        shared.PermissionDestLocalSettings,
+			dest:        claude.PermissionDestLocalSettings,
 			description: "Local settings (not committed)",
 			persistence: "Persists locally, not shared with team",
 		},
 		{
-			dest:        shared.PermissionDestSession,
+			dest:        claude.PermissionDestSession,
 			description: "Session-only permissions",
 			persistence: "Lost when session ends",
 		},
 		{
-			dest:        shared.PermissionDestCLIArg,
+			dest:        claude.PermissionDestCLIArg,
 			description: "Command-line argument",
 			persistence: "Single execution only",
 		},
@@ -174,58 +174,58 @@ func demonstratePermissionRules() {
 	fmt.Println()
 
 	// Example: Add rules
-	addRulesUpdate := shared.PermissionUpdate{
+	addRulesUpdate := claude.PermissionUpdate{
 		Type:     "addRules",
-		Behavior: shared.PermissionBehaviorAllow,
-		Rules: []shared.PermissionRuleValue{
+		Behavior: claude.PermissionBehaviorAllow,
+		Rules: []claude.PermissionRuleValue{
 			{ToolName: "Read"},
 			{ToolName: "Glob"},
 			{ToolName: "Grep"},
 		},
-		Destination: shared.PermissionDestSession,
+		Destination: claude.PermissionDestSession,
 	}
 	fmt.Println("1. Add rules (allow read-only tools):")
 	printJSON("Update", addRulesUpdate)
 
 	// Example: Add rules with content filter
 	content := "*.go"
-	addRulesWithContent := shared.PermissionUpdate{
+	addRulesWithContent := claude.PermissionUpdate{
 		Type:     "addRules",
-		Behavior: shared.PermissionBehaviorAllow,
-		Rules: []shared.PermissionRuleValue{
+		Behavior: claude.PermissionBehaviorAllow,
+		Rules: []claude.PermissionRuleValue{
 			{ToolName: "Edit", RuleContent: &content},
 		},
-		Destination: shared.PermissionDestProjectSettings,
+		Destination: claude.PermissionDestProjectSettings,
 	}
 	fmt.Println("2. Add rules with content filter (allow editing .go files):")
 	printJSON("Update", addRulesWithContent)
 
 	// Example: Replace all rules
-	replaceRulesUpdate := shared.PermissionUpdate{
+	replaceRulesUpdate := claude.PermissionUpdate{
 		Type:     "replaceRules",
-		Behavior: shared.PermissionBehaviorDeny,
-		Rules: []shared.PermissionRuleValue{
+		Behavior: claude.PermissionBehaviorDeny,
+		Rules: []claude.PermissionRuleValue{
 			{ToolName: "Bash"},
 		},
-		Destination: shared.PermissionDestSession,
+		Destination: claude.PermissionDestSession,
 	}
 	fmt.Println("3. Replace rules (deny Bash commands):")
 	printJSON("Update", replaceRulesUpdate)
 
 	// Example: Set mode
-	setModeUpdate := shared.PermissionUpdate{
+	setModeUpdate := claude.PermissionUpdate{
 		Type:        "setMode",
-		Mode:        shared.PermissionModeAcceptEdits,
-		Destination: shared.PermissionDestSession,
+		Mode:        claude.PermissionModeAcceptEdits,
+		Destination: claude.PermissionDestSession,
 	}
 	fmt.Println("4. Set permission mode:")
 	printJSON("Update", setModeUpdate)
 
 	// Example: Add allowed directories
-	addDirsUpdate := shared.PermissionUpdate{
+	addDirsUpdate := claude.PermissionUpdate{
 		Type:        "addDirectories",
 		Directories: []string{"/home/user/project", "/tmp/workspace"},
-		Destination: shared.PermissionDestSession,
+		Destination: claude.PermissionDestSession,
 	}
 	fmt.Println("5. Add allowed directories:")
 	printJSON("Update", addDirsUpdate)
@@ -237,16 +237,16 @@ func demonstratePermissionResults() {
 	fmt.Println()
 
 	// Allow result
-	allowResult := shared.PermissionResult{
-		Behavior:  shared.PermissionBehaviorAllow,
+	allowResult := claude.PermissionResult{
+		Behavior:  claude.PermissionBehaviorAllow,
 		ToolUseID: "tool-use-123",
 	}
 	fmt.Println("1. Allow result:")
 	printJSON("Result", allowResult)
 
 	// Allow with modified input
-	allowModifiedResult := shared.PermissionResult{
-		Behavior: shared.PermissionBehaviorAllow,
+	allowModifiedResult := claude.PermissionResult{
+		Behavior: claude.PermissionBehaviorAllow,
 		UpdatedInput: map[string]any{
 			"command": "ls -la", // Sanitized from "ls -la && rm -rf /"
 		},
@@ -256,8 +256,8 @@ func demonstratePermissionResults() {
 	printJSON("Result", allowModifiedResult)
 
 	// Deny result
-	denyResult := shared.PermissionResult{
-		Behavior:  shared.PermissionBehaviorDeny,
+	denyResult := claude.PermissionResult{
+		Behavior:  claude.PermissionBehaviorDeny,
 		Message:   "Operation not permitted: file outside allowed directories",
 		ToolUseID: "tool-use-789",
 		Interrupt: false,
@@ -266,8 +266,8 @@ func demonstratePermissionResults() {
 	printJSON("Result", denyResult)
 
 	// Deny with interrupt
-	denyInterruptResult := shared.PermissionResult{
-		Behavior:  shared.PermissionBehaviorDeny,
+	denyInterruptResult := claude.PermissionResult{
+		Behavior:  claude.PermissionBehaviorDeny,
 		Message:   "Critical security violation detected",
 		ToolUseID: "tool-use-abc",
 		Interrupt: true, // Stops the entire session
@@ -276,16 +276,16 @@ func demonstratePermissionResults() {
 	printJSON("Result", denyInterruptResult)
 
 	// Allow with permission updates
-	allowWithUpdates := shared.PermissionResult{
-		Behavior: shared.PermissionBehaviorAllow,
-		UpdatedPermissions: []shared.PermissionUpdate{
+	allowWithUpdates := claude.PermissionResult{
+		Behavior: claude.PermissionBehaviorAllow,
+		UpdatedPermissions: []claude.PermissionUpdate{
 			{
 				Type:     "addRules",
-				Behavior: shared.PermissionBehaviorAllow,
-				Rules: []shared.PermissionRuleValue{
+				Behavior: claude.PermissionBehaviorAllow,
+				Rules: []claude.PermissionRuleValue{
 					{ToolName: "Bash"},
 				},
-				Destination: shared.PermissionDestSession,
+				Destination: claude.PermissionDestSession,
 			},
 		},
 		ToolUseID: "tool-use-def",
@@ -302,7 +302,7 @@ func demonstrateSessionConfigurations() {
 	fmt.Println("1. Read-only session (exploration mode):")
 	fmt.Print(`
   session, err := v2.CreateSession(ctx,
-      v2.WithPermissionMode(shared.PermissionModeDefault),
+      v2.WithPermissionMode(claude.PermissionModeDefault),
       v2.WithAllowedTools([]string{"Read", "Glob", "Grep", "LSP"}),
   )
 `)
@@ -311,7 +311,7 @@ func demonstrateSessionConfigurations() {
 	fmt.Println("2. Code editing session (accept edits):")
 	fmt.Print(`
   session, err := v2.CreateSession(ctx,
-      v2.WithPermissionMode(shared.PermissionModeAcceptEdits),
+      v2.WithPermissionMode(claude.PermissionModeAcceptEdits),
       v2.WithAllowedDirectories([]string{"/home/user/project"}),
   )
 `)
@@ -320,7 +320,7 @@ func demonstrateSessionConfigurations() {
 	fmt.Println("3. Fully automated session (CI/CD):")
 	fmt.Print(`
   session, err := v2.CreateSession(ctx,
-      v2.WithPermissionMode(shared.PermissionModeBypassPermissions),
+      v2.WithPermissionMode(claude.PermissionModeBypassPermissions),
       v2.WithMaxTurns(50),
       v2.WithTimeout(5*time.Minute),
   )
@@ -330,7 +330,7 @@ func demonstrateSessionConfigurations() {
 	fmt.Println("4. Plan-only session (review before execute):")
 	fmt.Print(`
   session, err := v2.CreateSession(ctx,
-      v2.WithPermissionMode(shared.PermissionModePlan),
+      v2.WithPermissionMode(claude.PermissionModePlan),
   )
   // Claude will propose changes but not execute them
 `)
@@ -339,9 +339,9 @@ func demonstrateSessionConfigurations() {
 	fmt.Println("5. Custom permission logic (delegate to hooks):")
 	fmt.Print(`
   session, err := v2.CreateSession(ctx,
-      v2.WithPermissionMode(shared.PermissionModeDelegate),
-      v2.WithHooks(shared.HooksConfig{
-          PreToolUse: []shared.Hook{
+      v2.WithPermissionMode(claude.PermissionModeDelegate),
+      v2.WithHooks(claude.HooksConfig{
+          PreToolUse: []claude.Hook{
               {
                   Matcher: ".*",
                   Handler: myPermissionHandler,

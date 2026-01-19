@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/dotcommander/agent-sdk-go/claude/cli"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 	"github.com/dotcommander/agent-sdk-go/claude/v2"
 )
 
@@ -62,7 +62,7 @@ func demonstrateBasicOptions() {
 		"opus",                       // Short alias
 	}
 	for _, model := range models {
-		resolved := shared.ResolveModelName(model)
+		resolved := claude.ResolveModelName(model)
 		if model != resolved {
 			fmt.Printf("  %s -> %s\n", model, resolved)
 		} else {
@@ -287,7 +287,7 @@ func demonstrateAdvancedOptions() {
 	// Output format
 	fmt.Println("OutputFormat - Structured responses:")
 	fmt.Println(`
-  format := &shared.OutputFormat{
+  format := &claude.OutputFormat{
       Type: "json_schema",
       Schema: map[string]any{
           "type": "object",
@@ -312,7 +312,7 @@ func demonstrateMcpOptions() {
 
 	// Stdio server
 	fmt.Println("Stdio MCP Server:")
-	stdioConfig := shared.McpStdioServerConfig{
+	stdioConfig := claude.McpStdioServerConfig{
 		Type:    "stdio",
 		Command: "npx",
 		Args:    []string{"-y", "@modelcontextprotocol/server-filesystem"},
@@ -323,7 +323,7 @@ func demonstrateMcpOptions() {
 
 	// SSE server
 	fmt.Println("SSE MCP Server:")
-	sseConfig := shared.McpSSEServerConfig{
+	sseConfig := claude.McpSSEServerConfig{
 		Type: "sse",
 		URL:  "http://localhost:3000/sse",
 	}
@@ -333,7 +333,7 @@ func demonstrateMcpOptions() {
 
 	// HTTP server
 	fmt.Println("HTTP MCP Server:")
-	httpConfig := shared.McpHttpServerConfig{
+	httpConfig := claude.McpHttpServerConfig{
 		Type: "http",
 		URL:  "http://localhost:8080/mcp",
 	}
@@ -344,7 +344,7 @@ func demonstrateMcpOptions() {
 	// Example usage
 	fmt.Println("Example: Session with MCP servers")
 	fmt.Println(`
-  servers := map[string]shared.McpServerConfig{
+  servers := map[string]claude.McpServerConfig{
       "filesystem": {
           Type:    "stdio",
           Command: "npx",

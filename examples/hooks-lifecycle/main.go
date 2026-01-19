@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/claude"
 )
 
 func main() {
@@ -43,7 +43,7 @@ func main() {
 func demonstrateHookEvents() {
 	fmt.Println("--- Available Hook Events ---")
 
-	events := shared.AllHookEvents()
+	events := claude.AllHookEvents()
 	for i, event := range events {
 		fmt.Printf("  %2d. %s\n", i+1, event)
 	}
@@ -56,14 +56,14 @@ func demonstratePreToolUseHook() {
 	fmt.Println("Called BEFORE a tool executes. Can block, modify, or approve.")
 	fmt.Println()
 
-	input := shared.PreToolUseHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	input := claude.PreToolUseHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 			PermissionMode: "default",
 		},
-		HookEventName: string(shared.HookEventPreToolUse),
+		HookEventName: string(claude.HookEventPreToolUse),
 		ToolName:      "Write",
 		ToolInput: map[string]any{
 			"file_path": "/home/user/project/main.go",
@@ -79,12 +79,12 @@ func demonstratePreToolUseHook() {
 	fmt.Print(`
   filePath := input.ToolInput["file_path"].(string)
   if !strings.HasPrefix(filePath, input.Cwd) {
-      return shared.SyncHookOutput{
+      return claude.SyncHookOutput{
           Decision:   "block",
           StopReason: "Cannot write outside project directory",
       }
   }
-  return shared.SyncHookOutput{Continue: true}
+  return claude.SyncHookOutput{Continue: true}
 `)
 	fmt.Println()
 }
@@ -95,13 +95,13 @@ func demonstratePostToolUseHook() {
 	fmt.Println("Called AFTER a tool executes successfully. For logging, metrics, side effects.")
 	fmt.Println()
 
-	input := shared.PostToolUseHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	input := claude.PostToolUseHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName: string(shared.HookEventPostToolUse),
+		HookEventName: string(claude.HookEventPostToolUse),
 		ToolName:      "Read",
 		ToolInput: map[string]any{
 			"file_path": "/home/user/project/config.yaml",
@@ -119,13 +119,13 @@ func demonstratePostToolUseHook() {
 	fmt.Println("Called when a tool execution fails. For error tracking, recovery.")
 	fmt.Println()
 
-	failureInput := shared.PostToolUseFailureHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	failureInput := claude.PostToolUseFailureHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName: string(shared.HookEventPostToolUseFailure),
+		HookEventName: string(claude.HookEventPostToolUseFailure),
 		ToolName:      "Bash",
 		ToolInput: map[string]any{
 			"command": "rm -rf /important",
@@ -145,13 +145,13 @@ func demonstrateSessionLifecycleHooks() {
 	fmt.Println()
 
 	fmt.Println("SessionStart: Called when a session begins")
-	startInput := shared.SessionStartHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	startInput := claude.SessionStartHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName: string(shared.HookEventSessionStart),
+		HookEventName: string(claude.HookEventSessionStart),
 		Source:        "startup", // "startup" | "resume" | "clear" | "compact"
 		AgentType:     "claude-sonnet-4",
 		Model:         "claude-sonnet-4-20250514",
@@ -159,25 +159,25 @@ func demonstrateSessionLifecycleHooks() {
 	printJSON("SessionStart Input", startInput)
 
 	fmt.Println("SessionEnd: Called when a session ends")
-	endInput := shared.SessionEndHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	endInput := claude.SessionEndHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName: string(shared.HookEventSessionEnd),
+		HookEventName: string(claude.HookEventSessionEnd),
 		Reason:        "user_exit", // or "error", "timeout", etc.
 	}
 	printJSON("SessionEnd Input", endInput)
 
 	fmt.Println("Stop: Called when execution is stopping")
-	stopInput := shared.StopHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	stopInput := claude.StopHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName:  string(shared.HookEventStop),
+		HookEventName:  string(claude.HookEventStop),
 		StopHookActive: true,
 	}
 	printJSON("Stop Input", stopInput)
@@ -190,26 +190,26 @@ func demonstrateSubagentHooks() {
 	fmt.Println()
 
 	fmt.Println("SubagentStart: Called when a subagent is spawned")
-	startInput := shared.SubagentStartHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	startInput := claude.SubagentStartHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName: string(shared.HookEventSubagentStart),
+		HookEventName: string(claude.HookEventSubagentStart),
 		AgentID:       "agent-xyz789",
 		AgentType:     "code-review",
 	}
 	printJSON("SubagentStart Input", startInput)
 
 	fmt.Println("SubagentStop: Called when a subagent completes")
-	stopInput := shared.SubagentStopHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	stopInput := claude.SubagentStopHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName:       string(shared.HookEventSubagentStop),
+		HookEventName:       string(claude.HookEventSubagentStop),
 		StopHookActive:      false,
 		AgentID:             "agent-xyz789",
 		AgentTranscriptPath: "/tmp/agent-xyz789-transcript.json",
@@ -224,22 +224,22 @@ func demonstratePermissionHook() {
 	fmt.Println("Called when a tool requests elevated permissions.")
 	fmt.Println()
 
-	input := shared.PermissionRequestHookInput{
-		BaseHookInput: shared.BaseHookInput{
+	input := claude.PermissionRequestHookInput{
+		BaseHookInput: claude.BaseHookInput{
 			SessionID:      "session-123",
 			TranscriptPath: "/tmp/transcript.json",
 			Cwd:            "/home/user/project",
 		},
-		HookEventName: string(shared.HookEventPermissionRequest),
+		HookEventName: string(claude.HookEventPermissionRequest),
 		ToolName:      "Bash",
 		ToolInput: map[string]any{
 			"command": "sudo apt-get install nodejs",
 		},
-		PermissionSuggestions: []shared.PermissionUpdate{
+		PermissionSuggestions: []claude.PermissionUpdate{
 			{
 				Type:     "addRules",
-				Behavior: shared.PermissionBehaviorAllow,
-				Rules: []shared.PermissionRuleValue{
+				Behavior: claude.PermissionBehaviorAllow,
+				Rules: []claude.PermissionRuleValue{
 					{ToolName: "Bash"},
 				},
 			},
@@ -255,12 +255,12 @@ func demonstratePermissionHook() {
 
   for _, safe := range safeCommands {
       if strings.HasPrefix(cmd, safe) {
-          return shared.SyncHookOutput{Decision: "approve"}
+          return claude.SyncHookOutput{Decision: "approve"}
       }
   }
 
   // Require manual approval for other commands
-  return shared.SyncHookOutput{
+  return claude.SyncHookOutput{
       Decision: "block",
       Reason:   "Command requires manual approval",
   }
@@ -274,34 +274,34 @@ func demonstrateHookOutputs() {
 	fmt.Println()
 
 	fmt.Println("1. Continue (allow tool execution):")
-	printJSON("Output", shared.SyncHookOutput{Continue: true})
+	printJSON("Output", claude.SyncHookOutput{Continue: true})
 
 	fmt.Println("2. Block (prevent tool execution):")
-	printJSON("Output", shared.SyncHookOutput{
+	printJSON("Output", claude.SyncHookOutput{
 		Decision:   "block",
 		StopReason: "File path not allowed",
 	})
 
 	fmt.Println("3. Approve with system message:")
-	printJSON("Output", shared.SyncHookOutput{
+	printJSON("Output", claude.SyncHookOutput{
 		Decision:      "approve",
 		SystemMessage: "Tool execution approved by security policy",
 	})
 
 	fmt.Println("4. Suppress output (hide from user):")
-	printJSON("Output", shared.SyncHookOutput{
+	printJSON("Output", claude.SyncHookOutput{
 		Continue:       true,
 		SuppressOutput: true,
 	})
 
 	fmt.Println("5. Async hook (for long-running validation):")
-	printJSON("Output", shared.AsyncHookOutput{
+	printJSON("Output", claude.AsyncHookOutput{
 		Async:        true,
 		AsyncTimeout: 30, // seconds
 	})
 
 	fmt.Println("6. Custom hook-specific data:")
-	printJSON("Output", shared.SyncHookOutput{
+	printJSON("Output", claude.SyncHookOutput{
 		Continue: true,
 		HookSpecificOutput: map[string]any{
 			"validated":     true,

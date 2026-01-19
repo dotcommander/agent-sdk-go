@@ -20,8 +20,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dotcommander/agent-sdk-go/claude"
 	"github.com/dotcommander/agent-sdk-go/claude/cli"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
 	"github.com/dotcommander/agent-sdk-go/claude/v2"
 )
 
@@ -75,13 +75,13 @@ func demonstrateErrorTypeDiscrimination() {
 
 	// Create various error types for demonstration
 	errors := []error{
-		shared.NewCLINotFoundError("/usr/local/bin/claude", "claude"),
-		shared.NewConnectionError("failed to establish connection", nil),
-		shared.NewTimeoutError("query", "30s"),
-		shared.NewParserError(42, 10, `{"invalid": json}`, "unexpected character"),
-		shared.NewProtocolError("unknown_message", "received unexpected message type"),
-		shared.NewConfigurationError("model", "invalid-model", "model name must start with 'claude-'"),
-		shared.NewProcessError(12345, "claude", "process terminated unexpectedly", "SIGKILL"),
+		claude.NewCLINotFoundError("/usr/local/bin/claude", "claude"),
+		claude.NewConnectionError("failed to establish connection", nil),
+		claude.NewTimeoutError("query", "30s"),
+		claude.NewParserError(42, 10, `{"invalid": json}`, "unexpected character"),
+		claude.NewProtocolError("unknown_message", "received unexpected message type"),
+		claude.NewConfigurationError("model", "invalid-model", "model name must start with 'claude-'", nil),
+		claude.ProcessError(12345, "claude", "process terminated unexpectedly", "SIGKILL"),
 	}
 
 	for _, err := range errors {
@@ -95,23 +95,23 @@ func handleError(err error) {
 	fmt.Printf("  Error: %v\n", err)
 
 	switch {
-	case shared.IsCLINotFound(err):
+	case claude.IsCLINotFound(err):
 		fmt.Println("    Type: CLINotFoundError")
 		fmt.Println("    Recovery: Install Claude CLI or check PATH")
 
-	case shared.IsConnectionError(err):
+	case claude.IsConnectionError(err):
 		fmt.Println("    Type: ConnectionError")
 		fmt.Println("    Recovery: Retry with backoff or check network")
 
-	case shared.IsTimeoutError(err):
+	case claude.IsTimeoutError(err):
 		fmt.Println("    Type: TimeoutError")
 		fmt.Println("    Recovery: Increase timeout or reduce query complexity")
 
-	case shared.IsParserError(err):
+	case claude.IsParserError(err):
 		fmt.Println("    Type: ParserError")
 		fmt.Println("    Recovery: Check CLI output format or report bug")
 
-	case shared.IsProtocolError(err):
+	case claude.IsProtocolError(err):
 		fmt.Println("    Type: ProtocolError")
 		fmt.Println("    Recovery: Check SDK version compatibility")
 
@@ -187,7 +187,7 @@ func demonstrateErrorWrapping() {
 	fmt.Println("--- Error Wrapping ---")
 
 	// Simulate layered error wrapping
-	baseErr := shared.NewConnectionError("network unreachable", nil)
+	baseErr := claude.NewConnectionError("network unreachable", nil)
 	wrappedErr := fmt.Errorf("session creation failed: %w", baseErr)
 	topErr := fmt.Errorf("query failed: %w", wrappedErr)
 
@@ -196,14 +196,14 @@ func demonstrateErrorWrapping() {
 
 	// Demonstrate error unwrapping
 	fmt.Println("  Unwrapping chain:")
-	var connErr *shared.ConnectionError
+	var connErr *claude.ConnectionError
 	if errors.As(topErr, &connErr) {
 		fmt.Println("    Found ConnectionError in chain")
 		fmt.Printf("    Original error: %v\n", connErr)
 	}
 
 	// Check error type
-	if shared.IsConnectionError(errors.Unwrap(errors.Unwrap(topErr))) {
+	if claude.IsConnectionError(errors.Unwrap(errors.Unwrap(topErr))) {
 		fmt.Println("    Verified: root cause is ConnectionError")
 	}
 	fmt.Println()
@@ -214,7 +214,7 @@ func demonstrateCircuitBreaker() {
 	fmt.Println("--- Circuit Breaker Pattern ---")
 
 	// Create circuit breaker with custom config
-	cb := shared.NewStubCircuitBreaker(shared.CircuitBreakerConfig{
+	cb := claude.NewStubCircuitBreaker(claude.CircuitBreakerConfig{
 		FailureThreshold:    3,
 		RecoveryTimeout:     100 * time.Millisecond,
 		HalfOpenMaxRequests: 1,
@@ -391,19 +391,19 @@ func productionErrorHandler(err error) {
 	}
 
 	switch {
-	case shared.IsCLINotFound(err):
+	case claude.IsCLINotFound(err):
 		// Log and alert - infrastructure issue
 		log.Printf("CRITICAL: Claude CLI not found: %v", err)
 
-	case shared.IsConnectionError(err):
+	case claude.IsConnectionError(err):
 		// Log and retry with backoff
 		log.Printf("WARN: Connection error, will retry: %v", err)
 
-	case shared.IsTimeoutError(err):
+	case claude.IsTimeoutError(err):
 		// Log and potentially increase timeout
 		log.Printf("WARN: Operation timed out: %v", err)
 
-	case shared.IsParserError(err):
+	case claude.IsParserError(err):
 		// Log with full context for debugging
 		log.Printf("ERROR: Parser error, may indicate CLI version mismatch: %v", err)
 

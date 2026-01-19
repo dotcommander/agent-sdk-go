@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 	"github.com/stretchr/testify/assert"
 )
 

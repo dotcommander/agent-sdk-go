@@ -8,7 +8,7 @@ import (
 
 	"github.com/dotcommander/agent-sdk-go/claude"
 	"github.com/dotcommander/agent-sdk-go/claude/cli"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // sessionConfig holds configuration for session creation.

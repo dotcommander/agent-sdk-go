@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 const (

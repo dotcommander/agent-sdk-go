@@ -1,7 +1,7 @@
 package claude
 
 import (
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // ClientError represents a client-related error.

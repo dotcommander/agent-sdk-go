@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/dotcommander/agent-sdk-go/claude/mcp"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // DefaultInitTimeout is the default timeout for the Initialize handshake.

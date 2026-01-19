@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/dotcommander/agent-sdk-go/claude"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

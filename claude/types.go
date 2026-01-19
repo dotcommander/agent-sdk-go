@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/dotcommander/agent-sdk-go/claude/parser"
-	"github.com/dotcommander/agent-sdk-go/claude/shared"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // ClientOption is a function type for configuring the client.
