@@ -369,3 +369,254 @@ func BenchmarkMessageMarshaling(b *testing.B) {
 		}
 	})
 }
+
+func TestExtractBlocks(t *testing.T) {
+	tests := []struct {
+		name          string
+		msg           Message
+		wantToolUses  int
+		wantText      int
+		wantThinking  int
+	}{
+		{
+			name: "mixed content blocks",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&TextBlock{Text: "Hello"},
+					&ToolUseBlock{ToolUseID: "tool-1", Name: "read"},
+					&ThinkingBlock{Thinking: "Let me think..."},
+					&TextBlock{Text: "World"},
+					&ToolUseBlock{ToolUseID: "tool-2", Name: "write"},
+				},
+			},
+			wantToolUses: 2,
+			wantText:     2,
+			wantThinking: 1,
+		},
+		{
+			name: "only text blocks",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&TextBlock{Text: "First"},
+					&TextBlock{Text: "Second"},
+				},
+			},
+			wantToolUses: 0,
+			wantText:     2,
+			wantThinking: 0,
+		},
+		{
+			name: "empty content",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{},
+			},
+			wantToolUses: 0,
+			wantText:     0,
+			wantThinking: 0,
+		},
+		{
+			name:          "nil assistant message",
+			msg:           (*AssistantMessage)(nil),
+			wantToolUses:  0,
+			wantText:      0,
+			wantThinking:  0,
+		},
+		{
+			name:          "non-assistant message (user)",
+			msg:           &UserMessage{Content: "hello"},
+			wantToolUses:  0,
+			wantText:      0,
+			wantThinking:  0,
+		},
+		{
+			name:          "non-assistant message (system)",
+			msg:           &SystemMessage{Subtype: "init"},
+			wantToolUses:  0,
+			wantText:      0,
+			wantThinking:  0,
+		},
+		{
+			name:          "non-assistant message (result)",
+			msg:           &ResultMessage{Subtype: "success"},
+			wantToolUses:  0,
+			wantText:      0,
+			wantThinking:  0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test generic ExtractBlocks
+			toolUses := ExtractBlocks[*ToolUseBlock](tt.msg)
+			if len(toolUses) != tt.wantToolUses {
+				t.Errorf("ExtractBlocks[*ToolUseBlock]() = %d, want %d", len(toolUses), tt.wantToolUses)
+			}
+
+			textBlocks := ExtractBlocks[*TextBlock](tt.msg)
+			if len(textBlocks) != tt.wantText {
+				t.Errorf("ExtractBlocks[*TextBlock]() = %d, want %d", len(textBlocks), tt.wantText)
+			}
+
+			thinkingBlocks := ExtractBlocks[*ThinkingBlock](tt.msg)
+			if len(thinkingBlocks) != tt.wantThinking {
+				t.Errorf("ExtractBlocks[*ThinkingBlock]() = %d, want %d", len(thinkingBlocks), tt.wantThinking)
+			}
+
+			// Test convenience functions produce same results
+			if len(ExtractToolUses(tt.msg)) != tt.wantToolUses {
+				t.Errorf("ExtractToolUses() = %d, want %d", len(ExtractToolUses(tt.msg)), tt.wantToolUses)
+			}
+
+			if len(ExtractTextBlocks(tt.msg)) != tt.wantText {
+				t.Errorf("ExtractTextBlocks() = %d, want %d", len(ExtractTextBlocks(tt.msg)), tt.wantText)
+			}
+
+			if len(ExtractThinkingBlocks(tt.msg)) != tt.wantThinking {
+				t.Errorf("ExtractThinkingBlocks() = %d, want %d", len(ExtractThinkingBlocks(tt.msg)), tt.wantThinking)
+			}
+		})
+	}
+}
+
+func TestExtractBlocksPreservesContent(t *testing.T) {
+	toolUse := &ToolUseBlock{ToolUseID: "tool-123", Name: "calculator", Input: map[string]any{"expr": "2+2"}}
+	textBlock := &TextBlock{Text: "The answer is 4"}
+	thinkingBlock := &ThinkingBlock{Thinking: "I need to calculate", Signature: "sig-abc"}
+
+	msg := &AssistantMessage{
+		Content: []ContentBlock{textBlock, toolUse, thinkingBlock},
+	}
+
+	// Verify extracted blocks retain their content
+	extractedTools := ExtractToolUses(msg)
+	if len(extractedTools) != 1 {
+		t.Fatalf("expected 1 tool use, got %d", len(extractedTools))
+	}
+	if extractedTools[0].ToolUseID != "tool-123" || extractedTools[0].Name != "calculator" {
+		t.Error("tool use block content not preserved")
+	}
+
+	extractedText := ExtractTextBlocks(msg)
+	if len(extractedText) != 1 {
+		t.Fatalf("expected 1 text block, got %d", len(extractedText))
+	}
+	if extractedText[0].Text != "The answer is 4" {
+		t.Error("text block content not preserved")
+	}
+
+	extractedThinking := ExtractThinkingBlocks(msg)
+	if len(extractedThinking) != 1 {
+		t.Fatalf("expected 1 thinking block, got %d", len(extractedThinking))
+	}
+	if extractedThinking[0].Thinking != "I need to calculate" || extractedThinking[0].Signature != "sig-abc" {
+		t.Error("thinking block content not preserved")
+	}
+}
+
+func TestHasToolUsesAndIsToolUseMessage(t *testing.T) {
+	tests := []struct {
+		name            string
+		msg             Message
+		wantHasToolUses bool
+		wantIsToolUse   bool
+	}{
+		{
+			name: "assistant with tool uses",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&ToolUseBlock{ToolUseID: "t1", Name: "test"},
+				},
+			},
+			wantHasToolUses: true,
+			wantIsToolUse:   true,
+		},
+		{
+			name: "assistant without tool uses",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&TextBlock{Text: "Hello"},
+				},
+			},
+			wantHasToolUses: false,
+			wantIsToolUse:   false,
+		},
+		{
+			name:            "user message",
+			msg:             &UserMessage{Content: "test"},
+			wantHasToolUses: false,
+			wantIsToolUse:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasToolUses(tt.msg); got != tt.wantHasToolUses {
+				t.Errorf("HasToolUses() = %v, want %v", got, tt.wantHasToolUses)
+			}
+			if got := IsToolUseMessage(tt.msg); got != tt.wantIsToolUse {
+				t.Errorf("IsToolUseMessage() = %v, want %v", got, tt.wantIsToolUse)
+			}
+		})
+	}
+}
+
+func TestGetContentText(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  Message
+		want string
+	}{
+		{
+			name: "single text block",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&TextBlock{Text: "Hello world"},
+				},
+			},
+			want: "Hello world",
+		},
+		{
+			name: "multiple text blocks",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&TextBlock{Text: "Hello "},
+					&TextBlock{Text: "world"},
+				},
+			},
+			want: "Hello world",
+		},
+		{
+			name: "mixed content",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&TextBlock{Text: "Start "},
+					&ToolUseBlock{ToolUseID: "t1", Name: "test"},
+					&TextBlock{Text: "End"},
+				},
+			},
+			want: "Start End",
+		},
+		{
+			name: "no text blocks",
+			msg: &AssistantMessage{
+				Content: []ContentBlock{
+					&ToolUseBlock{ToolUseID: "t1", Name: "test"},
+				},
+			},
+			want: "",
+		},
+		{
+			name: "user message",
+			msg:  &UserMessage{Content: "test"},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetContentText(tt.msg); got != tt.want {
+				t.Errorf("GetContentText() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

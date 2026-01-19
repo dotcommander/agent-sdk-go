@@ -127,15 +127,7 @@ func (m *UserMessage) GetParentToolUseID() string {
 
 // MarshalJSON implements custom JSON marshaling for UserMessage
 func (m *UserMessage) MarshalJSON() ([]byte, error) {
-	type userMessage UserMessage
-	temp := struct {
-		Type string `json:"type"`
-		*userMessage
-	}{
-		Type:        MessageTypeUser,
-		userMessage: (*userMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(m, MessageTypeUser)
 }
 
 // AssistantMessage represents a message from the assistant.
@@ -171,15 +163,7 @@ func (m *AssistantMessage) IsRateLimited() bool {
 
 // MarshalJSON implements custom JSON marshaling for AssistantMessage
 func (m *AssistantMessage) MarshalJSON() ([]byte, error) {
-	type assistantMessage AssistantMessage
-	temp := struct {
-		Type string `json:"type"`
-		*assistantMessage
-	}{
-		Type:             MessageTypeAssistant,
-		assistantMessage: (*assistantMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(m, MessageTypeAssistant)
 }
 
 // UnmarshalJSON implements custom JSON unmarshaling for AssistantMessage
@@ -314,15 +298,7 @@ func (m *ResultMessage) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for ResultMessage
 func (m *ResultMessage) MarshalJSON() ([]byte, error) {
-	type resultMessage ResultMessage
-	temp := struct {
-		Type string `json:"type"`
-		*resultMessage
-	}{
-		Type:          MessageTypeResult,
-		resultMessage: (*resultMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(m, MessageTypeResult)
 }
 
 // TextBlock represents text content.
@@ -338,15 +314,7 @@ func (b *TextBlock) BlockType() string {
 
 // MarshalJSON implements custom JSON marshaling for TextBlock
 func (b *TextBlock) MarshalJSON() ([]byte, error) {
-	type textBlock TextBlock
-	temp := struct {
-		Type string `json:"type"`
-		*textBlock
-	}{
-		Type:      ContentBlockTypeText,
-		textBlock: (*textBlock)(b),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(b, ContentBlockTypeText)
 }
 
 // ThinkingBlock represents thinking content with signature.
@@ -363,15 +331,7 @@ func (b *ThinkingBlock) BlockType() string {
 
 // MarshalJSON implements custom JSON marshaling for ThinkingBlock
 func (b *ThinkingBlock) MarshalJSON() ([]byte, error) {
-	type thinkingBlock ThinkingBlock
-	temp := struct {
-		Type string `json:"type"`
-		*thinkingBlock
-	}{
-		Type:          ContentBlockTypeThinking,
-		thinkingBlock: (*thinkingBlock)(b),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(b, ContentBlockTypeThinking)
 }
 
 // ToolUseBlock represents a tool use request.
@@ -389,15 +349,7 @@ func (b *ToolUseBlock) BlockType() string {
 
 // MarshalJSON implements custom JSON marshaling for ToolUseBlock
 func (b *ToolUseBlock) MarshalJSON() ([]byte, error) {
-	type toolUseBlock ToolUseBlock
-	temp := struct {
-		Type string `json:"type"`
-		*toolUseBlock
-	}{
-		Type:         ContentBlockTypeToolUse,
-		toolUseBlock: (*toolUseBlock)(b),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(b, ContentBlockTypeToolUse)
 }
 
 // ToolResultBlock represents the result of a tool use.
@@ -415,15 +367,7 @@ func (b *ToolResultBlock) BlockType() string {
 
 // MarshalJSON implements custom JSON marshaling for ToolResultBlock
 func (b *ToolResultBlock) MarshalJSON() ([]byte, error) {
-	type toolResultBlock ToolResultBlock
-	temp := struct {
-		Type string `json:"type"`
-		*toolResultBlock
-	}{
-		Type:            ContentBlockTypeToolResult,
-		toolResultBlock: (*toolResultBlock)(b),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(b, ContentBlockTypeToolResult)
 }
 
 // RawControlMessage wraps raw control protocol messages for passthrough to the control handler.
@@ -483,15 +427,7 @@ func (m *StreamEvent) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for StreamEvent
 func (m *StreamEvent) MarshalJSON() ([]byte, error) {
-	type streamEvent StreamEvent
-	temp := struct {
-		Type string `json:"type"`
-		*streamEvent
-	}{
-		Type:        MessageTypeStreamEvent,
-		streamEvent: (*streamEvent)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(m, MessageTypeStreamEvent)
 }
 
 // CompactMetadata contains metadata about conversation compaction.
@@ -517,17 +453,7 @@ func (m *CompactBoundaryMessage) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for CompactBoundaryMessage
 func (m *CompactBoundaryMessage) MarshalJSON() ([]byte, error) {
-	type compactBoundaryMessage CompactBoundaryMessage
-	temp := struct {
-		Type    string `json:"type"`
-		Subtype string `json:"subtype"`
-		*compactBoundaryMessage
-	}{
-		Type:                   MessageTypeSystem,
-		Subtype:                SystemSubtypeCompactBoundary,
-		compactBoundaryMessage: (*compactBoundaryMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithTypeAndSubtype(m, MessageTypeSystem, SystemSubtypeCompactBoundary)
 }
 
 // ToolProgressMessage represents tool execution progress.
@@ -548,15 +474,7 @@ func (m *ToolProgressMessage) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for ToolProgressMessage
 func (m *ToolProgressMessage) MarshalJSON() ([]byte, error) {
-	type toolProgressMessage ToolProgressMessage
-	temp := struct {
-		Type string `json:"type"`
-		*toolProgressMessage
-	}{
-		Type:                MessageTypeToolProgress,
-		toolProgressMessage: (*toolProgressMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(m, MessageTypeToolProgress)
 }
 
 // StatusMessage represents a system status update.
@@ -576,17 +494,7 @@ func (m *StatusMessage) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for StatusMessage
 func (m *StatusMessage) MarshalJSON() ([]byte, error) {
-	type statusMessage StatusMessage
-	temp := struct {
-		Type    string `json:"type"`
-		Subtype string `json:"subtype"`
-		*statusMessage
-	}{
-		Type:          MessageTypeSystem,
-		Subtype:       SystemSubtypeStatus,
-		statusMessage: (*statusMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithTypeAndSubtype(m, MessageTypeSystem, SystemSubtypeStatus)
 }
 
 // AuthStatusMessage represents authentication status.
@@ -606,15 +514,7 @@ func (m *AuthStatusMessage) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for AuthStatusMessage
 func (m *AuthStatusMessage) MarshalJSON() ([]byte, error) {
-	type authStatusMessage AuthStatusMessage
-	temp := struct {
-		Type string `json:"type"`
-		*authStatusMessage
-	}{
-		Type:              MessageTypeAuthStatus,
-		authStatusMessage: (*authStatusMessage)(m),
-	}
-	return json.Marshal(temp)
+	return MarshalWithType(m, MessageTypeAuthStatus)
 }
 
 // HookResponseMessage represents hook execution response.
@@ -638,74 +538,46 @@ func (m *HookResponseMessage) Type() string {
 
 // MarshalJSON implements custom JSON marshaling for HookResponseMessage
 func (m *HookResponseMessage) MarshalJSON() ([]byte, error) {
-	type hookResponseMessage HookResponseMessage
-	temp := struct {
-		Type    string `json:"type"`
-		Subtype string `json:"subtype"`
-		*hookResponseMessage
-	}{
-		Type:                MessageTypeSystem,
-		Subtype:             SystemSubtypeHookResponse,
-		hookResponseMessage: (*hookResponseMessage)(m),
+	return MarshalWithTypeAndSubtype(m, MessageTypeSystem, SystemSubtypeHookResponse)
+}
+
+// ExtractBlocks extracts content blocks of type T from an assistant message.
+// Returns nil if the message is not an AssistantMessage or has no matching blocks.
+//
+// Example:
+//
+//	toolUses := ExtractBlocks[*ToolUseBlock](msg)
+//	textBlocks := ExtractBlocks[*TextBlock](msg)
+func ExtractBlocks[T ContentBlock](msg Message) []T {
+	assistant, ok := msg.(*AssistantMessage)
+	if !ok || assistant == nil {
+		return nil
 	}
-	return json.Marshal(temp)
+	var result []T
+	for _, block := range assistant.Content {
+		if typed, ok := block.(T); ok {
+			result = append(result, typed)
+		}
+	}
+	return result
 }
 
 // ExtractToolUses extracts tool use blocks from an assistant message.
 // Returns a slice of ToolUseBlock found in the message content.
 func ExtractToolUses(msg Message) []*ToolUseBlock {
-	var toolUses []*ToolUseBlock
-
-	assistantMsg, ok := msg.(*AssistantMessage)
-	if !ok {
-		return toolUses
-	}
-
-	for _, block := range assistantMsg.Content {
-		if toolUse, ok := block.(*ToolUseBlock); ok {
-			toolUses = append(toolUses, toolUse)
-		}
-	}
-
-	return toolUses
+	return ExtractBlocks[*ToolUseBlock](msg)
 }
 
 // ExtractTextBlocks extracts text blocks from an assistant message.
 // Returns a slice of TextBlock found in the message content.
 func ExtractTextBlocks(msg Message) []*TextBlock {
-	var textBlocks []*TextBlock
-
-	assistantMsg, ok := msg.(*AssistantMessage)
-	if !ok {
-		return textBlocks
-	}
-
-	for _, block := range assistantMsg.Content {
-		if text, ok := block.(*TextBlock); ok {
-			textBlocks = append(textBlocks, text)
-		}
-	}
-
-	return textBlocks
+	return ExtractBlocks[*TextBlock](msg)
 }
 
 // ExtractThinkingBlocks extracts thinking blocks from an assistant message.
 // Returns a slice of ThinkingBlock found in the message content.
 func ExtractThinkingBlocks(msg Message) []*ThinkingBlock {
-	var thinkingBlocks []*ThinkingBlock
-
-	assistantMsg, ok := msg.(*AssistantMessage)
-	if !ok {
-		return thinkingBlocks
-	}
-
-	for _, block := range assistantMsg.Content {
-		if thinking, ok := block.(*ThinkingBlock); ok {
-			thinkingBlocks = append(thinkingBlocks, thinking)
-		}
-	}
-
-	return thinkingBlocks
+	return ExtractBlocks[*ThinkingBlock](msg)
 }
 
 // HasToolUses returns true if the message contains any tool use blocks.
