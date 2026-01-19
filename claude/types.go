@@ -64,6 +64,11 @@ type ClientOptions struct {
 
 	// Sandbox is sandbox configuration for bash command execution.
 	Sandbox *shared.SandboxSettings
+
+	// SdkPluginConfig is the full SDK plugin configuration.
+	// Provides complete control over plugin behavior including
+	// timeouts, concurrency limits, and custom configuration.
+	SdkPluginConfig *shared.SdkPluginConfig
 }
 
 // BasicTransport provides core transport functionality.

@@ -907,3 +907,24 @@ func WithSandboxSettings(settings *shared.SandboxSettings) ClientOption {
 		o.Sandbox = settings
 	}
 }
+
+// WithPluginConfig sets the full SDK plugin configuration.
+// This provides complete control over plugin behavior including
+// timeouts, concurrency limits, and custom configuration.
+//
+// Example:
+//
+//	client, err := claude.NewClient(
+//	    claude.WithPluginConfig(&shared.SdkPluginConfig{
+//	        Enabled:       true,
+//	        PluginPath:    "/usr/local/lib/claude-plugins/analyzer.so",
+//	        Config:        map[string]any{"log_level": "debug"},
+//	        Timeout:       30 * time.Second,
+//	        MaxConcurrent: 4,
+//	    }),
+//	)
+func WithPluginConfig(config *shared.SdkPluginConfig) ClientOption {
+	return func(o *ClientOptions) {
+		o.SdkPluginConfig = config
+	}
+}

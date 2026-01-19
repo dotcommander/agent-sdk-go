@@ -61,8 +61,10 @@ User stories for achieving full feature parity with severity1 SDK. Created from 
 - US-030: SetMcpServers (via Protocol.SetMcpServers)
 - US-031: AccountInfo (via Protocol.GetAccountInfo)
 
+**✅ COMPLETED (Plugin Configuration):**
+- US-025: SdkPluginConfig with full fields (Enabled, PluginPath, Config, Timeout, MaxConcurrent)
+
 **⚠️ PARTIAL:**
-- US-025: PluginConfig (basic struct exists)
 - US-034: Documentation parity (ongoing)
 
 ---
@@ -809,7 +811,7 @@ client, err := claude.NewClient(
 ## Category: Plugin Configuration
 
 ### US-025: Full SDK Plugin Configuration
-**Status:** Partial (⚠️)
+**Status:** ✅ Completed
 **Priority:** P2
 
 **As a** SDK user

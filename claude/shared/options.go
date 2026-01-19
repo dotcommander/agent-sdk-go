@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 )
 
 // Options provides configuration for the Claude client.
@@ -352,6 +353,28 @@ type PluginConfig struct {
 	Path string `json:"path"`
 }
 
+// SdkPluginConfig represents full SDK plugin configuration.
+// This provides complete control over plugin behavior including
+// timeouts, concurrency limits, and custom configuration.
+type SdkPluginConfig struct {
+	// Enabled controls whether the plugin is active.
+	Enabled bool `json:"enabled"`
+
+	// PluginPath is the filesystem path to the plugin.
+	PluginPath string `json:"pluginPath"`
+
+	// Config contains plugin-specific configuration.
+	Config map[string]any `json:"config,omitempty"`
+
+	// Timeout is the maximum time allowed for each plugin call.
+	// Zero means no timeout.
+	Timeout time.Duration `json:"timeout,omitempty"`
+
+	// MaxConcurrent is the maximum number of concurrent plugin calls.
+	// Zero means unlimited.
+	MaxConcurrent int `json:"maxConcurrent,omitempty"`
+}
+
 // SettingSource specifies which settings to load.
 type SettingSource string
 
@@ -483,6 +506,11 @@ type BaseOptions struct {
 
 	// Plugins are plugin configurations.
 	Plugins []PluginConfig
+
+	// SdkPluginConfig is the full SDK plugin configuration.
+	// Provides complete control over plugin behavior including
+	// timeouts, concurrency limits, and custom configuration.
+	SdkPluginConfig *SdkPluginConfig
 
 	// SettingSources controls which settings to load.
 	SettingSources []SettingSource
@@ -654,6 +682,15 @@ func WithBaseOutputFormat(format *OutputFormat) BaseOptionFunc {
 func WithBasePlugins(plugins ...PluginConfig) BaseOptionFunc {
 	return func(o *BaseOptions) {
 		o.Plugins = plugins
+	}
+}
+
+// WithBaseSdkPluginConfig sets the full SDK plugin configuration on BaseOptions.
+// This provides complete control over plugin behavior including timeouts,
+// concurrency limits, and custom configuration.
+func WithBaseSdkPluginConfig(config *SdkPluginConfig) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.SdkPluginConfig = config
 	}
 }
 
