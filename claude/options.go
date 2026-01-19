@@ -583,6 +583,25 @@ func WithHook(event shared.HookEvent, config shared.HookConfig) ClientOption {
 	}
 }
 
+// withTypedHook is a generic helper that creates a typed hook wrapper.
+// It eliminates duplication across WithPreToolUseHook, WithPostToolUseHook, etc.
+// The fallbackOnMismatch parameter controls fail-open (continue) vs fail-closed (block) behavior.
+func withTypedHook[T any](event shared.HookEvent, fn func(ctx context.Context, input *T) (*shared.SyncHookOutput, error), failClosed bool) ClientOption {
+	return WithHook(event, shared.HookConfig{
+		Event: event,
+		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+			if typedInput, ok := input.(*T); ok {
+				return fn(ctx, typedInput)
+			}
+			// Type mismatch: fail-closed (block) for pre-hooks, fail-open (continue) for others
+			if failClosed {
+				return &shared.SyncHookOutput{Decision: "block", Reason: "invalid input type"}, nil
+			}
+			return &shared.SyncHookOutput{Continue: true}, nil
+		},
+	})
+}
+
 // WithPreToolUseHook is a convenience option for registering a PreToolUse hook.
 // The callback is invoked before each tool use and can approve or block execution.
 //
@@ -597,16 +616,7 @@ func WithHook(event shared.HookEvent, config shared.HookConfig) ClientOption {
 //	    }),
 //	)
 func WithPreToolUseHook(fn func(ctx context.Context, input *shared.PreToolUseHookInput) (*shared.SyncHookOutput, error)) ClientOption {
-	return WithHook(shared.HookEventPreToolUse, shared.HookConfig{
-		Event: shared.HookEventPreToolUse,
-		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
-			if typedInput, ok := input.(*shared.PreToolUseHookInput); ok {
-				return fn(ctx, typedInput)
-			}
-			// Fail-closed for type mismatch
-			return &shared.SyncHookOutput{Decision: "block", Reason: "invalid input type"}, nil
-		},
-	})
+	return withTypedHook(shared.HookEventPreToolUse, fn, true) // fail-closed for pre-hooks
 }
 
 // WithPostToolUseHook is a convenience option for registering a PostToolUse hook.
@@ -621,15 +631,7 @@ func WithPreToolUseHook(fn func(ctx context.Context, input *shared.PreToolUseHoo
 //	    }),
 //	)
 func WithPostToolUseHook(fn func(ctx context.Context, input *shared.PostToolUseHookInput) (*shared.SyncHookOutput, error)) ClientOption {
-	return WithHook(shared.HookEventPostToolUse, shared.HookConfig{
-		Event: shared.HookEventPostToolUse,
-		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
-			if typedInput, ok := input.(*shared.PostToolUseHookInput); ok {
-				return fn(ctx, typedInput)
-			}
-			return &shared.SyncHookOutput{Continue: true}, nil
-		},
-	})
+	return withTypedHook(shared.HookEventPostToolUse, fn, false) // fail-open for post-hooks
 }
 
 // WithSessionStartHook is a convenience option for registering a SessionStart hook.
@@ -644,15 +646,7 @@ func WithPostToolUseHook(fn func(ctx context.Context, input *shared.PostToolUseH
 //	    }),
 //	)
 func WithSessionStartHook(fn func(ctx context.Context, input *shared.SessionStartHookInput) (*shared.SyncHookOutput, error)) ClientOption {
-	return WithHook(shared.HookEventSessionStart, shared.HookConfig{
-		Event: shared.HookEventSessionStart,
-		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
-			if typedInput, ok := input.(*shared.SessionStartHookInput); ok {
-				return fn(ctx, typedInput)
-			}
-			return &shared.SyncHookOutput{Continue: true}, nil
-		},
-	})
+	return withTypedHook(shared.HookEventSessionStart, fn, false) // fail-open for session hooks
 }
 
 // WithSessionEndHook is a convenience option for registering a SessionEnd hook.
@@ -667,15 +661,7 @@ func WithSessionStartHook(fn func(ctx context.Context, input *shared.SessionStar
 //	    }),
 //	)
 func WithSessionEndHook(fn func(ctx context.Context, input *shared.SessionEndHookInput) (*shared.SyncHookOutput, error)) ClientOption {
-	return WithHook(shared.HookEventSessionEnd, shared.HookConfig{
-		Event: shared.HookEventSessionEnd,
-		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
-			if typedInput, ok := input.(*shared.SessionEndHookInput); ok {
-				return fn(ctx, typedInput)
-			}
-			return &shared.SyncHookOutput{Continue: true}, nil
-		},
-	})
+	return withTypedHook(shared.HookEventSessionEnd, fn, false) // fail-open for session hooks
 }
 
 // =============================================================================

@@ -16,6 +16,20 @@ type SessionOption func(*V2SessionOptions)
 // PromptOption is a function that configures a one-shot prompt operation.
 type PromptOption func(*PromptOptions)
 
+// =============================================================================
+// DRY Option Generators
+// These functions generate both SessionOption and PromptOption from a single
+// BaseOptionFunc, eliminating duplicate implementations.
+// =============================================================================
+
+// sessionAndPromptOption generates both option types from a shared.BaseOptionFunc.
+// This is the core DRY mechanism for option functions that apply to BaseOptions.
+func sessionAndPromptOption(baseFn shared.BaseOptionFunc) (SessionOption, PromptOption) {
+	return func(opts *V2SessionOptions) { baseFn(&opts.BaseOptions) },
+		func(opts *PromptOptions) { baseFn(&opts.BaseOptions) }
+}
+
+
 // PromptOptions contains configuration for one-shot prompt operations.
 // This mirrors the options parameter in unstable_v2_prompt().
 // Embeds shared.BaseOptions for common fields (DRY).
@@ -60,12 +74,14 @@ func (o *PromptOptions) Validate() error {
 
 // WithModel sets the Claude model to use for sessions.
 func WithModel(model string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseModel(model)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseModel(model))
+	return s
 }
 
 // WithPromptModel sets the model for a one-shot prompt.
 func WithPromptModel(model string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseModel(model)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseModel(model))
+	return p
 }
 
 // WithTimeout sets the timeout for session operations.
@@ -85,7 +101,14 @@ func WithPromptTimeout(timeout time.Duration) PromptOption {
 // WithSystemPrompt sets the system prompt for sessions.
 // This replaces any existing system prompt.
 func WithSystemPrompt(prompt string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseSystemPrompt(prompt)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseSystemPrompt(prompt))
+	return s
+}
+
+// WithPromptSystemPrompt sets the system prompt for a one-shot prompt.
+func WithPromptSystemPrompt(prompt string) PromptOption {
+	_, p := sessionAndPromptOption(shared.WithBaseSystemPrompt(prompt))
+	return p
 }
 
 // WithAppendSystemPrompt appends to the system prompt.
@@ -99,67 +122,74 @@ func WithSystemPrompt(prompt string) SessionOption {
 //	    v2.WithAppendSystemPrompt("Always use idiomatic Go patterns."),
 //	)
 func WithAppendSystemPrompt(prompt string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseAppendSystemPrompt(prompt)(&opts.BaseOptions) }
-}
-
-// WithPromptSystemPrompt sets the system prompt for a one-shot prompt.
-func WithPromptSystemPrompt(prompt string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseSystemPrompt(prompt)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseAppendSystemPrompt(prompt))
+	return s
 }
 
 // WithPromptAppendSystemPrompt appends to the system prompt for a one-shot prompt.
 func WithPromptAppendSystemPrompt(prompt string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseAppendSystemPrompt(prompt)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseAppendSystemPrompt(prompt))
+	return p
 }
 
 // WithAllowedTools restricts which tools Claude can use in sessions.
 func WithAllowedTools(tools ...string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseAllowedTools(tools...)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseAllowedTools(tools...))
+	return s
 }
 
 // WithPromptAllowedTools restricts tools for a one-shot prompt.
 func WithPromptAllowedTools(tools ...string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseAllowedTools(tools...)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseAllowedTools(tools...))
+	return p
 }
 
 // WithPermissionMode sets the permission mode for session file operations.
 func WithPermissionMode(mode string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBasePermissionMode(mode)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBasePermissionMode(mode))
+	return s
 }
 
 // WithPromptPermissionMode sets the permission mode for a one-shot prompt.
 func WithPromptPermissionMode(mode string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBasePermissionMode(mode)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBasePermissionMode(mode))
+	return p
 }
 
 // WithContextFiles adds files to the session context.
 func WithContextFiles(files ...string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseContextFiles(files...)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseContextFiles(files...))
+	return s
 }
 
 // WithPromptContextFiles adds files to the context for a one-shot prompt.
 func WithPromptContextFiles(files ...string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseContextFiles(files...)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseContextFiles(files...))
+	return p
 }
 
 // WithCustomArgs adds custom CLI arguments for sessions.
 func WithCustomArgs(args ...string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseCustomArgs(args...)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseCustomArgs(args...))
+	return s
 }
 
 // WithPromptCustomArgs adds custom CLI arguments for a one-shot prompt.
 func WithPromptCustomArgs(args ...string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseCustomArgs(args...)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseCustomArgs(args...))
+	return p
 }
 
 // WithEnv sets environment variables for session subprocess.
 func WithEnv(env map[string]string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseEnv(env)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseEnv(env))
+	return s
 }
 
 // WithPromptEnv sets environment variables for a one-shot prompt.
 func WithPromptEnv(env map[string]string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseEnv(env)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseEnv(env))
+	return p
 }
 
 // WithEnablePartialMessages enables streaming of partial messages.
@@ -253,189 +283,224 @@ func (o *V2SessionOptions) Validate() error {
 
 // WithContinue continues the most recent conversation.
 func WithContinue(cont bool) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseContinue(cont)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseContinue(cont))
+	return s
+}
+
+// WithPromptContinue continues the most recent conversation.
+func WithPromptContinue(cont bool) PromptOption {
+	_, p := sessionAndPromptOption(shared.WithBaseContinue(cont))
+	return p
 }
 
 // WithResume sets the session ID to resume.
 func WithResume(sessionID string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseResume(sessionID)(&opts.BaseOptions) }
-}
-
-// WithResumeSessionAt resumes at a specific message UUID.
-func WithResumeSessionAt(messageUUID string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseResumeSessionAt(messageUUID)(&opts.BaseOptions) }
-}
-
-// WithForkSession forks instead of continuing on resume.
-func WithForkSession(fork bool) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseForkSession(fork)(&opts.BaseOptions) }
-}
-
-// WithPersistSession saves sessions to disk.
-func WithPersistSession(persist bool) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBasePersistSession(persist)(&opts.BaseOptions) }
-}
-
-// WithDisallowedTools sets tools explicitly disallowed.
-func WithDisallowedTools(tools ...string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseDisallowedTools(tools...)(&opts.BaseOptions) }
-}
-
-// WithMaxThinkingTokens limits thinking tokens.
-func WithMaxThinkingTokens(tokens int) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseMaxThinkingTokens(tokens)(&opts.BaseOptions) }
-}
-
-// WithMaxTurns limits conversation turns.
-func WithMaxTurns(turns int) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseMaxTurns(turns)(&opts.BaseOptions) }
-}
-
-// WithMaxBudgetUSD sets the USD budget limit.
-func WithMaxBudgetUSD(budget float64) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseMaxBudgetUSD(budget)(&opts.BaseOptions) }
-}
-
-// WithFallbackModel sets the model used if primary fails.
-func WithFallbackModel(model string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseFallbackModel(model)(&opts.BaseOptions) }
-}
-
-// WithAdditionalDirectories sets extra accessible directories.
-func WithAdditionalDirectories(dirs ...string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseAdditionalDirectories(dirs...)(&opts.BaseOptions) }
-}
-
-// WithAgent sets the main thread agent name.
-func WithAgent(agent string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseAgent(agent)(&opts.BaseOptions) }
-}
-
-// WithAgents sets custom subagent definitions.
-func WithAgents(agents map[string]shared.AgentDefinition) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseAgents(agents)(&opts.BaseOptions) }
-}
-
-// WithBetas enables beta features.
-func WithBetas(betas ...string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseBetas(betas...)(&opts.BaseOptions) }
-}
-
-// WithEnableFileCheckpointing tracks file changes.
-func WithEnableFileCheckpointing(enable bool) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseEnableFileCheckpointing(enable)(&opts.BaseOptions) }
-}
-
-// WithOutputFormat sets structured output configuration.
-func WithOutputFormat(format *shared.OutputFormat) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseOutputFormat(format)(&opts.BaseOptions) }
-}
-
-// WithPlugins sets plugin configurations.
-func WithPlugins(plugins ...shared.PluginConfig) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBasePlugins(plugins...)(&opts.BaseOptions) }
-}
-
-// WithSettingSources controls which settings to load.
-func WithSettingSources(sources ...shared.SettingSource) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseSettingSources(sources...)(&opts.BaseOptions) }
-}
-
-// WithSandbox sets sandbox configuration.
-func WithSandbox(sandbox *shared.SandboxSettings) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseSandbox(sandbox)(&opts.BaseOptions) }
-}
-
-// WithStrictMcpConfig enables strict MCP validation.
-func WithStrictMcpConfig(strict bool) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseStrictMcpConfig(strict)(&opts.BaseOptions) }
-}
-
-// WithAllowDangerouslySkipPermissions enables bypass mode (requires flag).
-func WithAllowDangerouslySkipPermissions(allow bool) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseAllowDangerouslySkipPermissions(allow)(&opts.BaseOptions) }
-}
-
-// WithPermissionPromptToolName sets the MCP tool for permission prompts.
-func WithPermissionPromptToolName(toolName string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBasePermissionPromptToolName(toolName)(&opts.BaseOptions) }
-}
-
-// WithMcpServers sets MCP server configurations.
-func WithMcpServers(servers map[string]shared.McpServerConfig) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseMcpServers(servers)(&opts.BaseOptions) }
-}
-
-// WithExtraArgs sets additional CLI arguments.
-func WithExtraArgs(args map[string]string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseExtraArgs(args)(&opts.BaseOptions) }
-}
-
-// Prompt option functions for the new BaseOptions fields.
-
-// WithPromptContinue continues the most recent conversation.
-func WithPromptContinue(cont bool) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseContinue(cont)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseResume(sessionID))
+	return s
 }
 
 // WithPromptResume sets the session ID to resume.
 func WithPromptResume(sessionID string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseResume(sessionID)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseResume(sessionID))
+	return p
+}
+
+// WithResumeSessionAt resumes at a specific message UUID.
+func WithResumeSessionAt(messageUUID string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseResumeSessionAt(messageUUID))
+	return s
+}
+
+// WithForkSession forks instead of continuing on resume.
+func WithForkSession(fork bool) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseForkSession(fork))
+	return s
+}
+
+// WithPersistSession saves sessions to disk.
+func WithPersistSession(persist bool) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBasePersistSession(persist))
+	return s
+}
+
+// WithDisallowedTools sets tools explicitly disallowed.
+func WithDisallowedTools(tools ...string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseDisallowedTools(tools...))
+	return s
 }
 
 // WithPromptDisallowedTools sets tools explicitly disallowed.
 func WithPromptDisallowedTools(tools ...string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseDisallowedTools(tools...)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseDisallowedTools(tools...))
+	return p
+}
+
+// WithMaxThinkingTokens limits thinking tokens.
+func WithMaxThinkingTokens(tokens int) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseMaxThinkingTokens(tokens))
+	return s
 }
 
 // WithPromptMaxThinkingTokens limits thinking tokens.
 func WithPromptMaxThinkingTokens(tokens int) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseMaxThinkingTokens(tokens)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseMaxThinkingTokens(tokens))
+	return p
+}
+
+// WithMaxTurns limits conversation turns.
+func WithMaxTurns(turns int) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseMaxTurns(turns))
+	return s
 }
 
 // WithPromptMaxTurns limits conversation turns.
 func WithPromptMaxTurns(turns int) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseMaxTurns(turns)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseMaxTurns(turns))
+	return p
+}
+
+// WithMaxBudgetUSD sets the USD budget limit.
+func WithMaxBudgetUSD(budget float64) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseMaxBudgetUSD(budget))
+	return s
 }
 
 // WithPromptMaxBudgetUSD sets the USD budget limit.
 func WithPromptMaxBudgetUSD(budget float64) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseMaxBudgetUSD(budget)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseMaxBudgetUSD(budget))
+	return p
+}
+
+// WithFallbackModel sets the model used if primary fails.
+func WithFallbackModel(model string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseFallbackModel(model))
+	return s
 }
 
 // WithPromptFallbackModel sets the model used if primary fails.
 func WithPromptFallbackModel(model string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseFallbackModel(model)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseFallbackModel(model))
+	return p
+}
+
+// WithAdditionalDirectories sets extra accessible directories.
+func WithAdditionalDirectories(dirs ...string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseAdditionalDirectories(dirs...))
+	return s
 }
 
 // WithPromptAdditionalDirectories sets extra accessible directories.
 func WithPromptAdditionalDirectories(dirs ...string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseAdditionalDirectories(dirs...)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseAdditionalDirectories(dirs...))
+	return p
+}
+
+// WithAgent sets the main thread agent name.
+func WithAgent(agent string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseAgent(agent))
+	return s
 }
 
 // WithPromptAgent sets the main thread agent name.
 func WithPromptAgent(agent string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseAgent(agent)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseAgent(agent))
+	return p
+}
+
+// WithAgents sets custom subagent definitions.
+func WithAgents(agents map[string]shared.AgentDefinition) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseAgents(agents))
+	return s
 }
 
 // WithPromptAgents sets custom subagent definitions.
 func WithPromptAgents(agents map[string]shared.AgentDefinition) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseAgents(agents)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseAgents(agents))
+	return p
+}
+
+// WithBetas enables beta features.
+func WithBetas(betas ...string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseBetas(betas...))
+	return s
 }
 
 // WithPromptBetas enables beta features.
 func WithPromptBetas(betas ...string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseBetas(betas...)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseBetas(betas...))
+	return p
+}
+
+// WithEnableFileCheckpointing tracks file changes.
+func WithEnableFileCheckpointing(enable bool) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseEnableFileCheckpointing(enable))
+	return s
+}
+
+// WithOutputFormat sets structured output configuration.
+func WithOutputFormat(format *shared.OutputFormat) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseOutputFormat(format))
+	return s
 }
 
 // WithPromptOutputFormat sets structured output configuration.
 func WithPromptOutputFormat(format *shared.OutputFormat) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseOutputFormat(format)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseOutputFormat(format))
+	return p
+}
+
+// WithPlugins sets plugin configurations.
+func WithPlugins(plugins ...shared.PluginConfig) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBasePlugins(plugins...))
+	return s
+}
+
+// WithSettingSources controls which settings to load.
+func WithSettingSources(sources ...shared.SettingSource) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseSettingSources(sources...))
+	return s
+}
+
+// WithSandbox sets sandbox configuration.
+func WithSandbox(sandbox *shared.SandboxSettings) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseSandbox(sandbox))
+	return s
+}
+
+// WithStrictMcpConfig enables strict MCP validation.
+func WithStrictMcpConfig(strict bool) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseStrictMcpConfig(strict))
+	return s
+}
+
+// WithAllowDangerouslySkipPermissions enables bypass mode (requires flag).
+func WithAllowDangerouslySkipPermissions(allow bool) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseAllowDangerouslySkipPermissions(allow))
+	return s
+}
+
+// WithPermissionPromptToolName sets the MCP tool for permission prompts.
+func WithPermissionPromptToolName(toolName string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBasePermissionPromptToolName(toolName))
+	return s
+}
+
+// WithMcpServers sets MCP server configurations.
+func WithMcpServers(servers map[string]shared.McpServerConfig) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseMcpServers(servers))
+	return s
 }
 
 // WithPromptMcpServers sets MCP server configurations.
 func WithPromptMcpServers(servers map[string]shared.McpServerConfig) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseMcpServers(servers)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseMcpServers(servers))
+	return p
+}
+
+// WithExtraArgs sets additional CLI arguments.
+func WithExtraArgs(args map[string]string) SessionOption {
+	s, _ := sessionAndPromptOption(shared.WithBaseExtraArgs(args))
+	return s
 }
 
 // WithHooks registers hook handlers for session lifecycle events.
@@ -479,12 +544,14 @@ func WithHooks(hooks ...shared.HookConfig) SessionOption {
 //	    v2.WithCwd("/path/to/project"),
 //	)
 func WithCwd(cwd string) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseCwd(cwd)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseCwd(cwd))
+	return s
 }
 
 // WithPromptCwd sets the working directory for a one-shot prompt.
 func WithPromptCwd(cwd string) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseCwd(cwd)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseCwd(cwd))
+	return p
 }
 
 // WithTools sets the tools configuration (preset or explicit list).
@@ -501,12 +568,14 @@ func WithPromptCwd(cwd string) PromptOption {
 //	    v2.WithTools(shared.ToolsExplicit("Read", "Write", "Bash")),
 //	)
 func WithTools(tools *shared.ToolsConfig) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseTools(tools)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseTools(tools))
+	return s
 }
 
 // WithPromptTools sets the tools configuration for a one-shot prompt.
 func WithPromptTools(tools *shared.ToolsConfig) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseTools(tools)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseTools(tools))
+	return p
 }
 
 // WithStderr sets a callback for subprocess stderr output.
@@ -520,12 +589,14 @@ func WithPromptTools(tools *shared.ToolsConfig) PromptOption {
 //	    }),
 //	)
 func WithStderr(callback func(line string)) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseStderr(callback)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseStderr(callback))
+	return s
 }
 
 // WithPromptStderr sets a callback for stderr output for a one-shot prompt.
 func WithPromptStderr(callback func(line string)) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseStderr(callback)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseStderr(callback))
+	return p
 }
 
 // WithCanUseTool sets a permission callback for runtime tool approval.
@@ -553,12 +624,14 @@ func WithPromptStderr(callback func(line string)) PromptOption {
 //	    }),
 //	)
 func WithCanUseTool(callback shared.CanUseToolCallback) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseCanUseTool(callback)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseCanUseTool(callback))
+	return s
 }
 
 // WithPromptCanUseTool sets a permission callback for a one-shot prompt.
 func WithPromptCanUseTool(callback shared.CanUseToolCallback) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseCanUseTool(callback)(&opts.BaseOptions) }
+	_, p := sessionAndPromptOption(shared.WithBaseCanUseTool(callback))
+	return p
 }
 
 // =============================================================================
@@ -575,7 +648,14 @@ func WithPromptCanUseTool(callback shared.CanUseToolCallback) PromptOption {
 //	    v2.WithDebugWriter(os.Stderr), // See debug output in terminal
 //	)
 func WithDebugWriter(w io.Writer) SessionOption {
-	return func(opts *V2SessionOptions) { shared.WithBaseDebugWriter(w)(&opts.BaseOptions) }
+	s, _ := sessionAndPromptOption(shared.WithBaseDebugWriter(w))
+	return s
+}
+
+// WithPromptDebugWriter sets the writer for CLI debug output in one-shot prompts.
+func WithPromptDebugWriter(w io.Writer) PromptOption {
+	_, p := sessionAndPromptOption(shared.WithBaseDebugWriter(w))
+	return p
 }
 
 // WithDebugStderr redirects CLI debug output to os.Stderr.
@@ -588,11 +668,6 @@ func WithDebugStderr() SessionOption {
 // This is more explicit than nil but has the same effect.
 func WithDebugDisabled() SessionOption {
 	return WithDebugWriter(io.Discard)
-}
-
-// WithPromptDebugWriter sets the writer for CLI debug output in one-shot prompts.
-func WithPromptDebugWriter(w io.Writer) PromptOption {
-	return func(opts *PromptOptions) { shared.WithBaseDebugWriter(w)(&opts.BaseOptions) }
 }
 
 // WithPromptDebugStderr redirects CLI debug output to os.Stderr for one-shot prompts.

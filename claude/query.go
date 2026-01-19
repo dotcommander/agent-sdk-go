@@ -59,24 +59,37 @@ func (q *queryIterator) Next(ctx context.Context) (Message, error) {
 		return nil, ErrNoMoreMessages
 	}
 
-	select {
-	case msg, ok := <-q.msgChan:
-		if !ok {
-			q.closed = true
-			return nil, ErrNoMoreMessages
-		}
-		return msg, nil
+	// Prioritize messages over errors - drain msgChan first
+	for {
+		select {
+		case msg, ok := <-q.msgChan:
+			if !ok {
+				// msgChan closed, now check for errors
+				select {
+				case err, ok := <-q.errChan:
+					if ok && err != nil {
+						q.lastErr = err
+						q.closed = true
+						return nil, err
+					}
+				default:
+				}
+				q.closed = true
+				return nil, ErrNoMoreMessages
+			}
+			return msg, nil
 
-	case err, ok := <-q.errChan:
-		if !ok {
-			q.closed = true
-			return nil, ErrNoMoreMessages
-		}
-		q.lastErr = err
-		return nil, err
+		case err, ok := <-q.errChan:
+			if !ok {
+				// errChan closed but msgChan might still have messages
+				continue
+			}
+			q.lastErr = err
+			return nil, err
 
-	case <-ctx.Done():
-		return nil, ctx.Err()
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 }
 

@@ -196,21 +196,11 @@ func (c *ClientImpl) QueryStream(ctx context.Context, prompt string) (<-chan Mes
 
 	transport, err := subprocess.NewTransportWithPrompt(transportConfig, prompt)
 	if err != nil {
-		msgChan := make(chan Message)
-		errChan := make(chan error, 1)
-		errChan <- fmt.Errorf("create one-shot transport: %w", err)
-		close(msgChan)
-		close(errChan)
-		return msgChan, errChan
+		return errorChannels(fmt.Errorf("create one-shot transport: %w", err))
 	}
 
 	if err := transport.Connect(ctx); err != nil {
-		msgChan := make(chan Message)
-		errChan := make(chan error, 1)
-		errChan <- fmt.Errorf("connect one-shot transport: %w", err)
-		close(msgChan)
-		close(errChan)
-		return msgChan, errChan
+		return errorChannels(fmt.Errorf("connect one-shot transport: %w", err))
 	}
 
 	msgChan, errChan := transport.ReceiveMessages(ctx)
@@ -230,12 +220,7 @@ func (c *ClientImpl) ReceiveMessages(ctx context.Context) (<-chan Message, <-cha
 	defer c.mu.RUnlock()
 
 	if c.transport == nil {
-		msgChan := make(chan Message)
-		errChan := make(chan error, 1)
-		errChan <- fmt.Errorf("not connected")
-		close(msgChan)
-		close(errChan)
-		return msgChan, errChan
+		return errorChannels(fmt.Errorf("not connected"))
 	}
 
 	return c.transport.ReceiveMessages(ctx)
@@ -495,17 +480,9 @@ func (c *ClientImpl) GetOptions() *ClientOptions {
 
 // McpServerStatus returns MCP server statuses.
 func (c *ClientImpl) McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error) {
-	c.mu.RLock()
-	transport := c.transport
-	c.mu.RUnlock()
-
-	if transport == nil {
-		return nil, fmt.Errorf("not connected")
-	}
-
-	protocol := transport.Protocol()
-	if protocol == nil {
-		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	protocol, err := c.protocolOrError()
+	if err != nil {
+		return nil, err
 	}
 
 	rawStatuses, err := protocol.GetMcpServerStatus(ctx)
@@ -540,17 +517,9 @@ func (c *ClientImpl) McpServerStatus(ctx context.Context) ([]shared.McpServerSta
 // SupportedCommands returns the list of available slash commands.
 // Requires an active control protocol connection.
 func (c *ClientImpl) SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error) {
-	c.mu.RLock()
-	transport := c.transport
-	c.mu.RUnlock()
-
-	if transport == nil {
-		return nil, fmt.Errorf("not connected")
-	}
-
-	protocol := transport.Protocol()
-	if protocol == nil {
-		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	protocol, err := c.protocolOrError()
+	if err != nil {
+		return nil, err
 	}
 
 	rawCommands, err := protocol.GetCommands(ctx)
@@ -574,17 +543,9 @@ func (c *ClientImpl) SupportedCommands(ctx context.Context) ([]shared.SlashComma
 // SupportedModels returns the list of available models.
 // Requires an active control protocol connection.
 func (c *ClientImpl) SupportedModels(ctx context.Context) ([]shared.ModelInfo, error) {
-	c.mu.RLock()
-	transport := c.transport
-	c.mu.RUnlock()
-
-	if transport == nil {
-		return nil, fmt.Errorf("not connected")
-	}
-
-	protocol := transport.Protocol()
-	if protocol == nil {
-		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	protocol, err := c.protocolOrError()
+	if err != nil {
+		return nil, err
 	}
 
 	rawModels, err := protocol.GetModels(ctx)
@@ -608,17 +569,9 @@ func (c *ClientImpl) SupportedModels(ctx context.Context) ([]shared.ModelInfo, e
 // AccountInfo returns information about the current user's account.
 // Requires an active control protocol connection.
 func (c *ClientImpl) AccountInfo(ctx context.Context) (*shared.AccountInfo, error) {
-	c.mu.RLock()
-	transport := c.transport
-	c.mu.RUnlock()
-
-	if transport == nil {
-		return nil, fmt.Errorf("not connected")
-	}
-
-	protocol := transport.Protocol()
-	if protocol == nil {
-		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	protocol, err := c.protocolOrError()
+	if err != nil {
+		return nil, err
 	}
 
 	rawInfo, err := protocol.GetAccountInfo(ctx)
@@ -643,6 +596,25 @@ func getStringField(m map[string]any, key string) string {
 		return v
 	}
 	return ""
+}
+
+// protocolOrError gets the active control protocol, returning appropriate errors if not available.
+// This centralizes the common pattern of transport nil check + protocol nil check.
+func (c *ClientImpl) protocolOrError() (*subprocess.Protocol, error) {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	protocol := transport.Protocol()
+	if protocol == nil {
+		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	}
+
+	return protocol, nil
 }
 
 // SetMcpServers dynamically sets MCP servers.
@@ -728,6 +700,17 @@ func parseTimeout(s string) time.Duration {
 		return 30 * time.Second
 	}
 	return d
+}
+
+// errorChannels creates closed message and error channels with a single error.
+// This is a helper to reduce duplication in error return paths.
+func errorChannels(err error) (<-chan Message, <-chan error) {
+	msgChan := make(chan Message)
+	errChan := make(chan error, 1)
+	errChan <- err
+	close(msgChan)
+	close(errChan)
+	return msgChan, errChan
 }
 
 // WithClient creates a client, passes it to the provided function, and ensures
