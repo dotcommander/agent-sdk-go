@@ -138,8 +138,8 @@ func isValidEnvVar(k, v string) bool {
 // Note: exec.Command properly escapes arguments, so most characters are safe.
 // We only block null bytes which could cause issues.
 func isValidPrompt(prompt string) bool {
-	// Prompt must not contain shell escape characters or null bytes
-	return !strings.ContainsAny(prompt, "`$!;&|<>\x00")
+	// Only block null bytes - exec.Command handles escaping properly
+	return !strings.ContainsAny(prompt, "\x00")
 }
 
 // Transport represents a subprocess transport for communicating with Claude CLI.
