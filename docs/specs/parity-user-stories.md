@@ -16,7 +16,7 @@ User stories for achieving full feature parity with severity1 SDK. Created from 
 |----------|-----------|-------|-------|
 | **P0 Critical** | 10/10 | 100% | All complete |
 | **P1 Important** | 17/17 | 100% | All complete |
-| **P2 Nice to Have** | 5/8 | 63% | API stubs remain |
+| **P2 Nice to Have** | 8/8 | 100% | All complete |
 
 ### Completion Summary
 
@@ -54,12 +54,12 @@ User stories for achieving full feature parity with severity1 SDK. Created from 
 **✅ COMPLETED (Error Types):**
 - US-035: Error type hierarchy (PermissionError, ModelError added)
 
-**⚠️ STUBS (API exists, need CLI support verification):**
-- US-027: SupportedCommands
-- US-028: SupportedModels
-- US-029: McpServerStatus
-- US-030: SetMcpServers
-- US-031: AccountInfo
+**✅ COMPLETED (Control Protocol API Methods):**
+- US-027: SupportedCommands (via Protocol.GetCommands)
+- US-028: SupportedModels (via Protocol.GetModels)
+- US-029: McpServerStatus (via Protocol.GetMcpServerStatus)
+- US-030: SetMcpServers (via Protocol.SetMcpServers)
+- US-031: AccountInfo (via Protocol.GetAccountInfo)
 
 **⚠️ PARTIAL:**
 - US-025: PluginConfig (basic struct exists)
@@ -883,7 +883,7 @@ client, err := claude.NewClient(claude.WithPermissionMode(shared.PermissionModeA
 ## Category: API Completeness
 
 ### US-027: Supported Commands Query
-**Status:** Stub (⚠️)
+**Status:** ✅ Completed
 **Priority:** P2
 
 **As a** SDK user
@@ -912,7 +912,7 @@ if slices.Contains(commands, "refactor") {
 ---
 
 ### US-028: Supported Models Query
-**Status:** Stub (⚠️)
+**Status:** ✅ Completed
 **Priority:** P2
 
 **As a** SDK user
@@ -941,7 +941,7 @@ if slices.Contains(models, "claude-opus-4-5") {
 ---
 
 ### US-029: MCP Server Status Query
-**Status:** Stub (⚠️)
+**Status:** ✅ Completed
 **Priority:** P1
 
 **As a** SDK user
@@ -970,7 +970,7 @@ for name, info := range status {
 ---
 
 ### US-030: MCP Server Configuration Update
-**Status:** Stub (⚠️)
+**Status:** ✅ Completed
 **Priority:** P1
 
 **As a** SDK user
@@ -1007,7 +1007,7 @@ if err != nil {
 ---
 
 ### US-031: Account Info Query
-**Status:** Stub (⚠️)
+**Status:** ✅ Completed
 **Priority:** P2
 
 **As a** SDK user

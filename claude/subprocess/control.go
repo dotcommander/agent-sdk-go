@@ -470,6 +470,105 @@ func (p *Protocol) RewindFiles(ctx context.Context, userMessageID string) error 
 	return err
 }
 
+// GetAccountInfo requests account information from the CLI.
+// Returns the current user's account details including email and subscription type.
+func (p *Protocol) GetAccountInfo(ctx context.Context) (map[string]any, error) {
+	result, err := p.SendControlRequest(ctx, GetAccountInfoRequest{
+		Subtype: SubtypeGetAccountInfo,
+	}, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if resultMap, ok := result.(map[string]any); ok {
+		return resultMap, nil
+	}
+	return nil, fmt.Errorf("unexpected response type: %T", result)
+}
+
+// GetModels requests the list of available models from the CLI.
+// Returns model information including display names and descriptions.
+func (p *Protocol) GetModels(ctx context.Context) ([]map[string]any, error) {
+	result, err := p.SendControlRequest(ctx, GetModelsRequest{
+		Subtype: SubtypeGetModels,
+	}, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if models, ok := result.([]any); ok {
+		var results []map[string]any
+		for _, m := range models {
+			if model, ok := m.(map[string]any); ok {
+				results = append(results, model)
+			}
+		}
+		return results, nil
+	}
+	return nil, fmt.Errorf("unexpected response type: %T", result)
+}
+
+// GetCommands requests the list of available slash commands from the CLI.
+// Returns command information including names and descriptions.
+func (p *Protocol) GetCommands(ctx context.Context) ([]map[string]any, error) {
+	result, err := p.SendControlRequest(ctx, GetCommandsRequest{
+		Subtype: SubtypeGetCommands,
+	}, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if commands, ok := result.([]any); ok {
+		var results []map[string]any
+		for _, c := range commands {
+			if cmd, ok := c.(map[string]any); ok {
+				results = append(results, cmd)
+			}
+		}
+		return results, nil
+	}
+	return nil, fmt.Errorf("unexpected response type: %T", result)
+}
+
+// GetMcpServerStatus requests the status of MCP servers from the CLI.
+// Returns status information for each registered MCP server.
+func (p *Protocol) GetMcpServerStatus(ctx context.Context) ([]map[string]any, error) {
+	result, err := p.SendControlRequest(ctx, GetMcpServerStatusRequest{
+		Subtype: SubtypeGetMcpServerStatus,
+	}, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	if statuses, ok := result.([]any); ok {
+		var results []map[string]any
+		for _, s := range statuses {
+			if status, ok := s.(map[string]any); ok {
+				results = append(results, status)
+			}
+		}
+		return results, nil
+	}
+	return nil, fmt.Errorf("unexpected response type: %T", result)
+}
+
+// SetMcpServers sets the MCP server configuration via control protocol.
+// Returns the result of the operation including added/removed servers.
+func (p *Protocol) SetMcpServers(ctx context.Context, servers map[string]any) (map[string]any, error) {
+	result, err := p.SendControlRequest(ctx, SetMcpServersRequest{
+		Subtype: SubtypeSetMcpServers,
+		Servers: servers,
+	}, 30*time.Second) // Longer timeout for server initialization
+	if err != nil {
+		return nil, err
+	}
+
+	if resultMap, ok := result.(map[string]any); ok {
+		return resultMap, nil
+	}
+	return nil, fmt.Errorf("unexpected response type: %T", result)
+}
+
 // ReceiveMessages returns a channel for receiving regular (non-control) messages.
 func (p *Protocol) ReceiveMessages() <-chan map[string]any {
 	return p.messageStream

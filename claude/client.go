@@ -495,36 +495,226 @@ func (c *ClientImpl) GetOptions() *ClientOptions {
 
 // McpServerStatus returns MCP server statuses.
 func (c *ClientImpl) McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error) {
-	// TODO: Implement actual MCP server status retrieval
-	// This would require communication with the CLI to query MCP server status
-	return nil, fmt.Errorf("McpServerStatus not implemented")
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	protocol := transport.Protocol()
+	if protocol == nil {
+		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	}
+
+	rawStatuses, err := protocol.GetMcpServerStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get MCP server status: %w", err)
+	}
+
+	var statuses []shared.McpServerStatus
+	for _, raw := range rawStatuses {
+		status := shared.McpServerStatus{
+			Name: getStringField(raw, "name"),
+		}
+		if s, ok := raw["status"].(string); ok {
+			status.Status = s
+		}
+		if errMsg, ok := raw["error"].(string); ok {
+			status.Error = errMsg
+		}
+		// Parse serverInfo if present
+		if serverInfoRaw, ok := raw["serverInfo"].(map[string]any); ok {
+			status.ServerInfo = &shared.McpServerInfo{
+				Name:    getStringField(serverInfoRaw, "name"),
+				Version: getStringField(serverInfoRaw, "version"),
+			}
+		}
+		statuses = append(statuses, status)
+	}
+
+	return statuses, nil
+}
+
+// SupportedCommands returns the list of available slash commands.
+// Requires an active control protocol connection.
+func (c *ClientImpl) SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error) {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	protocol := transport.Protocol()
+	if protocol == nil {
+		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	}
+
+	rawCommands, err := protocol.GetCommands(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get commands: %w", err)
+	}
+
+	var commands []shared.SlashCommand
+	for _, raw := range rawCommands {
+		cmd := shared.SlashCommand{
+			Name:         getStringField(raw, "name"),
+			Description:  getStringField(raw, "description"),
+			ArgumentHint: getStringField(raw, "argumentHint"),
+		}
+		commands = append(commands, cmd)
+	}
+
+	return commands, nil
+}
+
+// SupportedModels returns the list of available models.
+// Requires an active control protocol connection.
+func (c *ClientImpl) SupportedModels(ctx context.Context) ([]shared.ModelInfo, error) {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	protocol := transport.Protocol()
+	if protocol == nil {
+		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	}
+
+	rawModels, err := protocol.GetModels(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get models: %w", err)
+	}
+
+	var models []shared.ModelInfo
+	for _, raw := range rawModels {
+		model := shared.ModelInfo{
+			Value:       getStringField(raw, "value"),
+			DisplayName: getStringField(raw, "displayName"),
+			Description: getStringField(raw, "description"),
+		}
+		models = append(models, model)
+	}
+
+	return models, nil
+}
+
+// AccountInfo returns information about the current user's account.
+// Requires an active control protocol connection.
+func (c *ClientImpl) AccountInfo(ctx context.Context) (*shared.AccountInfo, error) {
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
+
+	if transport == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	protocol := transport.Protocol()
+	if protocol == nil {
+		return nil, fmt.Errorf("control protocol not active: connect with hooks or permissions enabled")
+	}
+
+	rawInfo, err := protocol.GetAccountInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get account info: %w", err)
+	}
+
+	info := &shared.AccountInfo{
+		Email:            getStringField(rawInfo, "email"),
+		Organization:     getStringField(rawInfo, "organization"),
+		SubscriptionType: getStringField(rawInfo, "subscriptionType"),
+		TokenSource:      getStringField(rawInfo, "tokenSource"),
+		ApiKeySource:     getStringField(rawInfo, "apiKeySource"),
+	}
+
+	return info, nil
+}
+
+// getStringField safely extracts a string field from a map.
+func getStringField(m map[string]any, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
 }
 
 // SetMcpServers dynamically sets MCP servers.
 func (c *ClientImpl) SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	transport := c.transport
+	c.mu.RUnlock()
 
 	// Store the new MCP servers in options
+	c.mu.Lock()
 	c.options.McpServers = servers
+	c.mu.Unlock()
 
-	// TODO: Implement actual MCP server configuration update
-	// This would require updating the transport configuration and potentially reconnecting
+	// If control protocol is active, use it to set servers dynamically
+	if transport != nil {
+		if protocol := transport.Protocol(); protocol != nil {
+			// Convert servers to map[string]any for the protocol
+			serversMap := make(map[string]any)
+			for name, config := range servers {
+				serversMap[name] = config
+			}
 
-	// For now, return a simple result indicating servers were updated
+			rawResult, err := protocol.SetMcpServers(ctx, serversMap)
+			if err != nil {
+				return nil, fmt.Errorf("set MCP servers via protocol: %w", err)
+			}
+
+			// Parse the result
+			result := &shared.McpSetServersResult{
+				Added:   []string{},
+				Removed: []string{},
+				Errors:  make(map[string]string),
+			}
+
+			if added, ok := rawResult["added"].([]any); ok {
+				for _, a := range added {
+					if s, ok := a.(string); ok {
+						result.Added = append(result.Added, s)
+					}
+				}
+			}
+			if removed, ok := rawResult["removed"].([]any); ok {
+				for _, r := range removed {
+					if s, ok := r.(string); ok {
+						result.Removed = append(result.Removed, s)
+					}
+				}
+			}
+			if errors, ok := rawResult["errors"].(map[string]any); ok {
+				for k, v := range errors {
+					if s, ok := v.(string); ok {
+						result.Errors[k] = s
+					}
+				}
+			}
+
+			return result, nil
+		}
+	}
+
+	// Fallback: return simple result indicating servers were stored
+	// Note: Without control protocol, changes take effect on next connection
 	result := &shared.McpSetServersResult{
 		Added:   []string{},
 		Removed: []string{},
 		Errors:  make(map[string]string),
 	}
 
-	// Extract server names for the "added" field
 	for name := range servers {
 		result.Added = append(result.Added, name)
 	}
 
-	// Note: This is a minimal implementation that just stores the config
-	// The actual MCP server activation would require CLI communication
 	return result, nil
 }
 

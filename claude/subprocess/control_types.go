@@ -28,6 +28,16 @@ const (
 	SubtypeMcpMessage = "mcp_message"
 	// SubtypeRewindFiles requests file rewind to a specific user message state.
 	SubtypeRewindFiles = "rewind_files"
+	// SubtypeGetAccountInfo requests the current account information.
+	SubtypeGetAccountInfo = "get_account_info"
+	// SubtypeGetModels requests the list of available models.
+	SubtypeGetModels = "get_models"
+	// SubtypeGetCommands requests the list of available slash commands.
+	SubtypeGetCommands = "get_commands"
+	// SubtypeGetMcpServerStatus requests the status of MCP servers.
+	SubtypeGetMcpServerStatus = "get_mcp_server_status"
+	// SubtypeSetMcpServers sets the MCP server configuration.
+	SubtypeSetMcpServers = "set_mcp_servers"
 )
 
 // Response subtype constants for control responses.
@@ -175,4 +185,36 @@ type McpMessageRequest struct {
 	ServerName string `json:"server_name"`
 	// Message is the JSONRPC message to route.
 	Message map[string]any `json:"message"`
+}
+
+// GetAccountInfoRequest requests account information from the CLI.
+type GetAccountInfoRequest struct {
+	// Subtype is always SubtypeGetAccountInfo.
+	Subtype string `json:"subtype"`
+}
+
+// GetModelsRequest requests the list of available models from the CLI.
+type GetModelsRequest struct {
+	// Subtype is always SubtypeGetModels.
+	Subtype string `json:"subtype"`
+}
+
+// GetCommandsRequest requests the list of available slash commands from the CLI.
+type GetCommandsRequest struct {
+	// Subtype is always SubtypeGetCommands.
+	Subtype string `json:"subtype"`
+}
+
+// GetMcpServerStatusRequest requests the status of MCP servers from the CLI.
+type GetMcpServerStatusRequest struct {
+	// Subtype is always SubtypeGetMcpServerStatus.
+	Subtype string `json:"subtype"`
+}
+
+// SetMcpServersRequest sets the MCP server configuration.
+type SetMcpServersRequest struct {
+	// Subtype is always SubtypeSetMcpServers.
+	Subtype string `json:"subtype"`
+	// Servers is the map of server name to configuration.
+	Servers map[string]any `json:"servers"`
 }

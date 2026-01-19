@@ -179,6 +179,18 @@ type Controller interface {
 
 	// SetMcpServers dynamically sets MCP servers.
 	SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error)
+
+	// SupportedCommands returns the list of available slash commands.
+	// Requires an active control protocol connection.
+	SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error)
+
+	// SupportedModels returns the list of available models.
+	// Requires an active control protocol connection.
+	SupportedModels(ctx context.Context) ([]shared.ModelInfo, error)
+
+	// AccountInfo returns information about the current user's account.
+	// Requires an active control protocol connection.
+	AccountInfo(ctx context.Context) (*shared.AccountInfo, error)
 }
 
 // ContextManager handles context file operations.

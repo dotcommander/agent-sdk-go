@@ -141,6 +141,18 @@ func (m *MockClient) SetMcpServers(ctx context.Context, servers map[string]share
 	}, nil
 }
 
+func (m *MockClient) SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error) {
+	return []shared.SlashCommand{}, nil
+}
+
+func (m *MockClient) SupportedModels(ctx context.Context) ([]shared.ModelInfo, error) {
+	return []shared.ModelInfo{}, nil
+}
+
+func (m *MockClient) AccountInfo(ctx context.Context) (*shared.AccountInfo, error) {
+	return &shared.AccountInfo{}, nil
+}
+
 // Ensure MockClient implements claude.Client interface
 var _ claude.Client = (*MockClient)(nil)
 
