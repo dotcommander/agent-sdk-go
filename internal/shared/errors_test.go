@@ -144,7 +144,7 @@ func TestProtocolError(t *testing.T) {
 }
 
 func TestConfigurationError(t *testing.T) {
-	err := NewConfigurationError("Model", "invalid-model", "model must start with claude-")
+	err := NewConfigurationError("Model", "test-value", "invalid model format")
 
 	msg := err.Error()
 	if !strings.Contains(msg, "invalid configuration") {
@@ -153,10 +153,10 @@ func TestConfigurationError(t *testing.T) {
 	if !strings.Contains(msg, `field="Model"`) {
 		t.Error("Error message should contain field")
 	}
-	if !strings.Contains(msg, `value="invalid-model"`) {
+	if !strings.Contains(msg, `value="test-value"`) {
 		t.Error("Error message should contain value")
 	}
-	if !strings.Contains(msg, "model must start with claude-") {
+	if !strings.Contains(msg, "invalid model format") {
 		t.Error("Error message should contain reason")
 	}
 }
