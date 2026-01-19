@@ -292,17 +292,15 @@ func ValidateContextFiles(files []string) error {
 }
 
 // ValidateModel validates a model name.
+// Accepts any non-empty model name to support alternate providers (zai, synthetic).
 func ValidateModel(model string) error {
 	if strings.TrimSpace(model) == "" {
 		return errors.New("model name cannot be empty")
 	}
 
-	if !strings.HasPrefix(model, "claude-") {
-		return errors.New("model name must start with 'claude-'")
-	}
-
-	// Additional model validation could be added here
-	// For now, just check the prefix
+	// Note: We intentionally don't validate the claude- prefix here
+	// to support alternate providers that use different model names
+	// (e.g., GLM-4.7 for zai, DeepSeek-V3.2 for synthetic)
 
 	return nil
 }
