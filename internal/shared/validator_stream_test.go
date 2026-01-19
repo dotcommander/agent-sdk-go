@@ -45,7 +45,7 @@ func TestStreamValidatorTrackMessage(t *testing.T) {
 			wantToolReq:    0,
 			wantToolResp:   0,
 			wantPending:    0,
-			wantIssueCount: 1, // empty_stream after MarkStreamEnd
+			wantIssueCount: 0, // nil message doesn't count as an issue, it's tracked as total message
 		},
 		{
 			name: "assistant with tool use",
@@ -350,7 +350,7 @@ func TestStreamValidatorConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Concurrent message tracking
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -364,7 +364,7 @@ func TestStreamValidatorConcurrency(t *testing.T) {
 	}
 
 	// Concurrent tool tracking
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(2)
 		go func(id int) {
 			defer wg.Done()
@@ -377,7 +377,7 @@ func TestStreamValidatorConcurrency(t *testing.T) {
 	}
 
 	// Concurrent error tracking
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -386,7 +386,7 @@ func TestStreamValidatorConcurrency(t *testing.T) {
 	}
 
 	// Concurrent reads
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		wg.Add(3)
 		go func() {
 			defer wg.Done()

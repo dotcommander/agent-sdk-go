@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -308,10 +309,8 @@ func ValidateModel(model string) error {
 // ValidatePermissionMode validates a permission mode.
 func ValidatePermissionMode(mode string) error {
 	validModes := []string{"auto", "read", "write", "restricted"}
-	for _, valid := range validModes {
-		if mode == valid {
-			return nil
-		}
+	if slices.Contains(validModes, mode) {
+		return nil
 	}
 	return fmt.Errorf("invalid permission mode: %s (must be one of: %v)", mode, validModes)
 }
@@ -384,7 +383,7 @@ func ValidateFileSize(file string, maxSize int64) error {
 }
 
 // SanitizeMessage returns a sanitized version of a message for logging.
-func SanitizeMessage(msg Message) interface{} {
+func SanitizeMessage(msg Message) any {
 	switch m := msg.(type) {
 	case *UserMessage:
 		return sanitizeUserMessage(m)
@@ -402,8 +401,8 @@ func SanitizeMessage(msg Message) interface{} {
 }
 
 // Helper functions for sanitization
-func sanitizeUserMessage(msg *UserMessage) map[string]interface{} {
-	sanitized := map[string]interface{}{
+func sanitizeUserMessage(msg *UserMessage) map[string]any {
+	sanitized := map[string]any{
 		"type": msg.Type(),
 	}
 
@@ -411,7 +410,7 @@ func sanitizeUserMessage(msg *UserMessage) map[string]interface{} {
 	case string:
 		sanitized["content"] = "<redacted>" // Redact user content for logging
 	case []ContentBlock:
-		sanitizedBlocks := make([]interface{}, len(content))
+		sanitizedBlocks := make([]any, len(content))
 		for i, block := range content {
 			sanitizedBlocks[i] = sanitizeContentBlock(block)
 		}
@@ -428,8 +427,8 @@ func sanitizeUserMessage(msg *UserMessage) map[string]interface{} {
 	return sanitized
 }
 
-func sanitizeAssistantMessage(msg *AssistantMessage) map[string]interface{} {
-	sanitized := map[string]interface{}{
+func sanitizeAssistantMessage(msg *AssistantMessage) map[string]any {
+	sanitized := map[string]any{
 		"type":  msg.Type(),
 		"model": msg.Model,
 	}
@@ -438,7 +437,7 @@ func sanitizeAssistantMessage(msg *AssistantMessage) map[string]interface{} {
 		sanitized["error"] = string(*msg.Error)
 	}
 
-	sanitizedBlocks := make([]interface{}, len(msg.Content))
+	sanitizedBlocks := make([]any, len(msg.Content))
 	for i, block := range msg.Content {
 		sanitizedBlocks[i] = sanitizeContentBlock(block)
 	}
@@ -447,15 +446,15 @@ func sanitizeAssistantMessage(msg *AssistantMessage) map[string]interface{} {
 	return sanitized
 }
 
-func sanitizeSystemMessage(msg *SystemMessage) map[string]interface{} {
-	return map[string]interface{}{
+func sanitizeSystemMessage(msg *SystemMessage) map[string]any {
+	return map[string]any{
 		"type":    msg.Type(),
 		"subtype": msg.Subtype,
 	}
 }
 
-func sanitizeResultMessage(msg *ResultMessage) map[string]interface{} {
-	sanitized := map[string]interface{}{
+func sanitizeResultMessage(msg *ResultMessage) map[string]any {
+	sanitized := map[string]any{
 		"type":        msg.Type(),
 		"subtype":     msg.Subtype,
 		"duration_ms": msg.DurationMs,
@@ -471,8 +470,8 @@ func sanitizeResultMessage(msg *ResultMessage) map[string]interface{} {
 	return sanitized
 }
 
-func sanitizeStreamEvent(msg *StreamEvent) map[string]interface{} {
-	sanitized := map[string]interface{}{
+func sanitizeStreamEvent(msg *StreamEvent) map[string]any {
+	sanitized := map[string]any{
 		"type":  msg.Type(),
 		"uuid":  msg.UUID,
 		"event": "<redacted>", // Redact event content for logging
@@ -485,31 +484,31 @@ func sanitizeStreamEvent(msg *StreamEvent) map[string]interface{} {
 	return sanitized
 }
 
-func sanitizeContentBlock(block ContentBlock) interface{} {
+func sanitizeContentBlock(block ContentBlock) any {
 	switch b := block.(type) {
 	case *TextBlock:
-		return map[string]interface{}{
+		return map[string]any{
 			"type": "text",
 			"text": "<redacted>", // Redact text content for logging
 		}
 	case *ThinkingBlock:
-		return map[string]interface{}{
+		return map[string]any{
 			"type":      "thinking",
 			"thinking":  "<redacted>", // Redact thinking content for logging
 			"signature": b.Signature,
 		}
 	case *ToolUseBlock:
-		return map[string]interface{}{
-			"type":       "tool_use",
+		return map[string]any{
+			"type":        "tool_use",
 			"tool_use_id": b.ToolUseID,
-			"name":       b.Name,
-			"input":      "<redacted>", // Redact input for logging
+			"name":        b.Name,
+			"input":       "<redacted>", // Redact input for logging
 		}
 	case *ToolResultBlock:
-		return map[string]interface{}{
-			"type":       "tool_result",
+		return map[string]any{
+			"type":        "tool_result",
 			"tool_use_id": b.ToolUseID,
-			"is_error":   b.IsError,
+			"is_error":    b.IsError,
 		}
 	default:
 		return fmt.Sprintf("unknown content block type: %T", block)
@@ -649,8 +648,8 @@ func (v *StreamValidator) GetIssues() []StreamIssue {
 		}
 	}
 
-	// Check if stream ended without messages
-	if v.streamEnded && v.totalMessages == 0 {
+	// Check if stream ended without messages or tracked tools
+	if v.streamEnded && v.totalMessages == 0 && len(v.toolsRequested) == 0 && len(v.toolsReceived) == 0 {
 		issues = append(issues, StreamIssue{
 			Type:   "empty_stream",
 			Detail: "stream ended without any messages",
