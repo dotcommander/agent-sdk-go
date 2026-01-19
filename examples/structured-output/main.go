@@ -222,7 +222,7 @@ func demonstrateParsingPatterns() {
 	}
 
 	fmt.Println("1. Direct struct parsing:")
-	fmt.Print(`
+	printCode(`
   type SentimentResult struct {
       Sentiment  string   ` + "`json:\"sentiment\"`" + `
       Confidence float64  ` + "`json:\"confidence\"`" + `
@@ -252,7 +252,7 @@ func demonstrateParsingPatterns() {
 	printJSON("Example Structured Output", structuredOutput)
 
 	fmt.Println("2. Generic map parsing:")
-	fmt.Print(`
+	printCode(`
   // When schema varies or is dynamic
   if result.StructuredOutput != nil {
       output := result.StructuredOutput.(map[string]any)
@@ -269,7 +269,7 @@ func demonstrateParsingPatterns() {
 	fmt.Println()
 
 	fmt.Println("3. Validation wrapper:")
-	fmt.Print(`
+	printCode(`
   func ParseStructuredOutput[T any](result *claude.ResultMessage) (*T, error) {
       if result.StructuredOutput == nil {
           return nil, fmt.Errorf("no structured output in result")
@@ -292,6 +292,11 @@ func demonstrateParsingPatterns() {
   sentiment, err := ParseStructuredOutput[SentimentResult](result)
 `)
 	fmt.Println()
+}
+
+// printCode prints example code blocks without triggering vet warnings.
+func printCode(code string) {
+	fmt.Print(code)
 }
 
 // printJSON prints a labeled JSON object.

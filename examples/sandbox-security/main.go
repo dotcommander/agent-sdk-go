@@ -61,8 +61,8 @@ func demonstrateBasicSandbox() {
   client, err := claude.NewClient(
       claude.WithModel("claude-sonnet-4-20250514"),
       claude.WithSandbox(sandbox),
-  )
-`)
+  )`)
+	fmt.Println()
 }
 
 // demonstrateSandboxTypes shows different sandbox types.
@@ -140,11 +140,11 @@ func demonstrateHookBasedSecurity() {
               },
           },
       },
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("Restrict file access via hooks:")
-	fmt.Println(`
+	printCode(`
   hooks := map[claude.HookEvent][]claude.HookConfig{
       claude.HookEventPreToolUse: {
           {
@@ -172,8 +172,8 @@ func demonstrateHookBasedSecurity() {
               },
           },
       },
-  }
-`)
+  }`)
+	fmt.Println()
 }
 
 // demonstrateSecurityPatterns shows common security patterns.
@@ -206,8 +206,8 @@ func demonstrateSecurityPatterns() {
       claude.WithHooks(hooks),
       claude.WithPermissionMode(permissionMode),
       claude.WithDisallowedTools(disallowedTools),
-  )
-`)
+  )`)
+	fmt.Println()
 
 	fmt.Println("2. Environment-based security:")
 	fmt.Println(`
@@ -238,8 +238,8 @@ func demonstrateSecurityPatterns() {
       }
 
       return base
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("3. Audit logging:")
 	fmt.Println(`
@@ -272,8 +272,13 @@ func demonstrateSecurityPatterns() {
               },
           },
       },
-  }
-`)
+  }`)
+	fmt.Println()
+}
+
+// printCode prints example code blocks without triggering vet warnings.
+func printCode(code string) {
+	fmt.Println(code)
 }
 
 // printJSON prints a labeled JSON object.

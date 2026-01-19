@@ -57,9 +57,10 @@ func demonstrateDebugLogging() {
   client, err := claude.NewClient(
       claude.WithDebugWriter(debugFile),
   )`)
+	fmt.Println()
 
 	fmt.Println("3. Custom logger:")
-	fmt.Println(`
+	printCode(`
   type DebugLogger struct {
       prefix string
   }
@@ -72,14 +73,16 @@ func demonstrateDebugLogging() {
   client, err := claude.NewClient(
       claude.WithDebugWriter(&DebugLogger{prefix: "CLAUDE"}),
   )`)
+	fmt.Println()
 
 	fmt.Println("4. Stderr callback for CLI output:")
-	fmt.Println(`
+	printCode(`
   client, err := claude.NewClient(
       claude.WithStderrCallback(func(line string) {
           log.Printf("CLI stderr: %s", line)
       }),
   )`)
+	fmt.Println()
 }
 
 // demonstrateStreamValidation shows stream validation features.
@@ -100,7 +103,7 @@ func demonstrateStreamValidation() {
 	printJSON("Initial Stats", stats)
 
 	fmt.Println("Tracking messages with the validator:")
-	fmt.Println(`
+	printCode(`
   validator := claude.NewStreamValidator()
 
   // Track each message from the stream
@@ -126,6 +129,7 @@ func demonstrateStreamValidation() {
           log.Printf("Stream issue: %s - %s", issue.Type, issue.Detail)
       }
   }`)
+	fmt.Println()
 }
 
 // demonstrateStreamStats shows stream statistics features.
@@ -163,7 +167,7 @@ func demonstrateDiagnosticPatterns() {
 	fmt.Println()
 
 	fmt.Println("1. Connection diagnostics:")
-	fmt.Println(`
+	printCode(`
   info, err := client.GetServerInfo(ctx)
   if err != nil {
       log.Printf("Not connected: %v", err)
@@ -174,9 +178,10 @@ func demonstrateDiagnosticPatterns() {
   fmt.Printf("Transport: %s\n", info["transport_type"])
   fmt.Printf("Protocol Active: %v\n", info["protocol_active"])
   fmt.Printf("Initialized: %v\n", info["protocol_initialized"])`)
+	fmt.Println()
 
 	fmt.Println("2. Error classification:")
-	fmt.Println(`
+	printCode(`
   response, err := client.Query(ctx, prompt)
   if err != nil {
       // Classify the error type
@@ -207,9 +212,10 @@ func demonstrateDiagnosticPatterns() {
           fmt.Printf("Unknown error: %v\n", err)
       }
   }`)
+	fmt.Println()
 
 	fmt.Println("3. Performance monitoring:")
-	fmt.Println(`
+	printCode(`
   startTime := time.Now()
 
   iter := client.ReceiveResponseIterator(ctx)
@@ -237,9 +243,10 @@ func demonstrateDiagnosticPatterns() {
   fmt.Printf("Total time: %v\n", totalTime)
   fmt.Printf("Tokens: %d\n", tokenCount)
   fmt.Printf("Tokens/sec: %.2f\n", float64(tokenCount)/totalTime.Seconds())`)
+	fmt.Println()
 
 	fmt.Println("4. Comprehensive diagnostics function:")
-	fmt.Println(`
+	printCode(`
   func runDiagnostics(client claude.Client, ctx context.Context) {
       fmt.Println("=== Claude SDK Diagnostics ===")
 
@@ -275,6 +282,12 @@ func demonstrateDiagnosticPatterns() {
 
       fmt.Println("==============================")
   }`)
+	fmt.Println()
+}
+
+// printCode prints example code blocks without triggering vet warnings.
+func printCode(code string) {
+	fmt.Println(code)
 }
 
 // printJSON prints a labeled JSON object.

@@ -82,8 +82,8 @@ func demonstrateBasicServer() {
       claude.WithMcpServers(map[string]shared.McpServerConfig{
           "weather": server.ToConfig(),
       }),
-  )
-`)
+  )`)
+	fmt.Println()
 }
 
 // demonstrateToolDefinitions shows various tool definition patterns.
@@ -165,8 +165,8 @@ func demonstrateToolDefinitions() {
           // Execute query...
           return map[string]any{"rows": 10, "query": query}, nil
       },
-  )
-`)
+  )`)
+	fmt.Println()
 }
 
 // demonstrateToolHandlers shows tool handler implementation.
@@ -186,7 +186,7 @@ func demonstrateToolHandlers() {
       // Execute query (with proper validation!)
       rows, err := db.QueryContext(ctx, query)
       if err != nil {
-          return nil, fmt.Errorf("query failed: %w", err)
+          return nil, fmt.Errorf("query failed: %%w", err)
       }
 
       // Return results as map
@@ -194,8 +194,8 @@ func demonstrateToolHandlers() {
           "rows":     formatResults(rows),
           "database": database,
       }, nil
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("Example: Returning different content types")
 	fmt.Println(`
@@ -215,9 +215,9 @@ func demonstrateToolHandlers() {
 
   // Error (return error, not nil)
   if err != nil {
-      return nil, fmt.Errorf("failed: %w", err)
-  }
-`)
+      return nil, fmt.Errorf("failed: %%w", err)
+  }`)
+	fmt.Println()
 }
 
 // demonstrateClientIntegration shows integrating SDK MCP servers with the client.
@@ -245,8 +245,8 @@ func demonstrateClientIntegration() {
   )
 
   // Query - Claude will automatically use the tools
-  response, err := client.Query(ctx, "Get the user with ID 12345")
-`)
+  response, err := client.Query(ctx, "Get the user with ID 12345")`)
+	fmt.Println()
 
 	fmt.Println("Example: Multiple SDK MCP servers")
 	fmt.Println(`
@@ -266,8 +266,8 @@ func demonstrateClientIntegration() {
   // Claude can use tools from all servers
   response, err := client.Query(ctx,
       "Find user john@example.com, show their recent orders, " +
-      "and check if product SKU-123 is in stock")
-`)
+      "and check if product SKU-123 is in stock")`)
+	fmt.Println()
 }
 
 // printJSON prints a labeled JSON object.

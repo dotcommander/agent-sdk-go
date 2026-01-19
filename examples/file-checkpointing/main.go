@@ -71,7 +71,7 @@ func demonstrateCapturingUUIDs() {
 
 	printJSON("UserMessage with UUID", userMsg)
 
-	fmt.Print(`
+	printCode(`
   // Capture UUID from received messages
   var checkpointUUID string
 
@@ -96,7 +96,7 @@ func demonstrateCapturingUUIDs() {
 func demonstrateRewindWorkflow() {
 	fmt.Println("--- Rewind Workflow ---")
 	fmt.Println()
-	fmt.Print(`
+	printCode(`
   // Step 1: Store checkpoint UUIDs as you work
   checkpoints := make(map[string]string)
 
@@ -194,6 +194,11 @@ func demonstrateUseCases() {
   }
 `)
 	fmt.Println()
+}
+
+// printCode prints example code blocks without triggering vet warnings.
+func printCode(code string) {
+	fmt.Print(code)
 }
 
 // printJSON prints a labeled JSON object.

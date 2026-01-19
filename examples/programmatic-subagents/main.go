@@ -62,8 +62,8 @@ func demonstrateBasicAgent() {
       }),
   )
 
-  // Claude will use this agent when Task tool specifies "code-reviewer"
-`)
+  // Claude will use this agent when Task tool specifies "code-reviewer"`)
+	fmt.Println()
 }
 
 // demonstrateAgentModels shows model configuration for agents.
@@ -186,8 +186,8 @@ func demonstrateAgentHierarchies() {
 
   // The orchestrator can delegate to specialists:
   // "Use the frontend-dev agent to fix the React component,
-  //  then use the tester agent to verify the fix"
-`)
+  //  then use the tester agent to verify the fix"`)
+	fmt.Println()
 }
 
 // demonstratePracticalPatterns shows practical agent patterns.
@@ -210,8 +210,8 @@ func demonstratePracticalPatterns() {
           Model:       claude.AgentModelOpus,
           Tools:       []string{"Read", "Write", "Edit", "Glob", "Grep"},
       },
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("2. Documentation Generator:")
 	fmt.Println(`
@@ -228,8 +228,8 @@ func demonstratePracticalPatterns() {
           Model:       claude.AgentModelSonnet,
           Tools:       []string{"Read", "Write", "Edit"},
       },
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("3. Test-Driven Development:")
 	fmt.Println(`
@@ -251,8 +251,8 @@ func demonstratePracticalPatterns() {
       },
   }
 
-  // Workflow: test-writer -> implementer -> refactorer (red-green-refactor)
-`)
+  // Workflow: test-writer -> implementer -> refactorer (red-green-refactor)`)
+	fmt.Println()
 }
 
 // printJSON prints a labeled JSON object.

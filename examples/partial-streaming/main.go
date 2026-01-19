@@ -52,8 +52,8 @@ func demonstrateEnablingPartialMessages() {
   session, err := v2.CreateSession(ctx,
       v2.WithModel("claude-sonnet-4-20250514"),
       v2.WithIncludePartialMessages(true),
-  )
-`)
+  )`)
+	fmt.Println()
 }
 
 // demonstrateStreamEventTypes shows the different stream event types.
@@ -178,8 +178,8 @@ func demonstrateProcessingPatterns() {
       }
   }
 
-  fmt.Println("Full response:", fullText.String())
-`)
+  fmt.Println("Full response:", fullText.String())`)
+	fmt.Println()
 
 	fmt.Println("2. Tracking multiple content blocks:")
 	fmt.Println(`
@@ -202,8 +202,8 @@ func demonstrateProcessingPatterns() {
               c.blocks[index].WriteString(text)
           }
       }
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("3. Handling thinking blocks:")
 	fmt.Println(`
@@ -226,8 +226,8 @@ func demonstrateProcessingPatterns() {
               }
           }
       }
-  }
-`)
+  }`)
+	fmt.Println()
 }
 
 // demonstrateUIIntegration shows patterns for UI integration.
@@ -264,11 +264,11 @@ func demonstrateUIIntegration() {
   for text := range uiUpdates {
       ui.AppendText(text)
       ui.ScrollToBottom()
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("2. Progress indicator:")
-	fmt.Println(`
+	printCode(`
   type StreamProgress struct {
       Started    bool
       BlockCount int
@@ -306,8 +306,8 @@ func demonstrateUIIntegration() {
               ui.HideSpinner()
           }
       }
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("3. Cancelable streaming:")
 	fmt.Println(`
@@ -329,8 +329,13 @@ func demonstrateUIIntegration() {
           break
       }
       // Process message...
-  }
-`)
+  }`)
+	fmt.Println()
+}
+
+// printCode prints example code blocks without triggering vet warnings.
+func printCode(code string) {
+	fmt.Println(code)
 }
 
 // printJSON prints a labeled JSON object.

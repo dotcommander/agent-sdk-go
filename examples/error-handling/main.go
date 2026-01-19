@@ -80,7 +80,7 @@ func demonstrateErrorTypeDiscrimination() {
 		claude.NewTimeoutError("query", "30s"),
 		claude.NewParserError(42, 10, `{"invalid": json}`, "unexpected character"),
 		claude.NewProtocolError("unknown_message", "received unexpected message type"),
-		claude.NewConfigurationError("model", "invalid-model", "model name must start with 'claude-'", nil),
+		claude.NewConfigurationError("model", "", "model name cannot be empty", nil),
 		claude.ProcessError(12345, "claude", "process terminated unexpectedly", "SIGKILL"),
 	}
 

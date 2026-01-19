@@ -53,8 +53,8 @@ func demonstrateBasicPlugins() {
   // Register plugins with client
   client, err := claude.NewClient(
       claude.WithPlugins([]claude.PluginConfig{plugin}),
-  )
-`)
+  )`)
+	fmt.Println()
 }
 
 // demonstratePluginOptions shows various plugin configuration options.
@@ -103,8 +103,8 @@ func demonstrateMultiplePlugins() {
   client, err := claude.NewClient(
       claude.WithModel("claude-sonnet-4-20250514"),
       claude.WithPlugins(plugins),
-  )
-`)
+  )`)
+	fmt.Println()
 }
 
 // demonstratePluginPatterns shows common plugin patterns.
@@ -135,8 +135,8 @@ func demonstratePluginPatterns() {
       }
 
       return base
-  }
-`)
+  }`)
+	fmt.Println()
 
 	fmt.Println("2. Plugin discovery from directory:")
 	fmt.Println(`
@@ -160,8 +160,8 @@ func demonstratePluginPatterns() {
 
   // Usage
   plugins, _ := discoverPlugins("/home/user/claude-plugins")
-  client, _ := claude.NewClient(claude.WithPlugins(plugins))
-`)
+  client, _ := claude.NewClient(claude.WithPlugins(plugins))`)
+	fmt.Println()
 
 	fmt.Println("3. Dynamic plugin configuration from file:")
 	fmt.Println(`
@@ -191,8 +191,8 @@ func demonstratePluginPatterns() {
 
   // Usage
   plugins, _ := loadPluginConfig("plugins.json")
-  client, _ := claude.NewClient(claude.WithPlugins(plugins))
-`)
+  client, _ := claude.NewClient(claude.WithPlugins(plugins))`)
+	fmt.Println()
 }
 
 // printJSON prints a labeled JSON object.
