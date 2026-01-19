@@ -5,6 +5,7 @@ package claude
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/dotcommander/agent-sdk-go/claude/shared"
@@ -241,20 +242,28 @@ func WithSdkMcpServer(name string, server *shared.McpSdkServerConfig) ClientOpti
 	}
 }
 
-// WithAllowedTools sets the allowed tools list.
+// WithAllowedTools restricts Claude to only use the specified tools.
+// When set, Claude can only use tools from this allowlist.
+// Takes precedence over WithDisallowedTools if both are set.
+//
 // For SDK MCP tools, use the format: mcp__<server_name>__<tool_name>
 //
 // Example:
 //
+//	client, _ := claude.NewClient(
+//	    claude.WithAllowedTools("Read", "Write", "Bash"),
+//	)
+//	// Claude can only use Read, Write, Bash - all other tools blocked
+//
+//	// With MCP tools:
 //	client, _ := claude.NewClient(
 //	    claude.WithSdkMcpServer("calc", calculator),
 //	    claude.WithAllowedTools("mcp__calc__add", "mcp__calc__sqrt"),
 //	)
 func WithAllowedTools(tools ...string) ClientOption {
 	return func(o *ClientOptions) {
-		o.CustomArgs = append(o.CustomArgs, "--allowed-tools")
-		for _, t := range tools {
-			o.CustomArgs = append(o.CustomArgs, t)
+		if len(tools) > 0 {
+			o.CustomArgs = append(o.CustomArgs, "--allowed-tools", strings.Join(tools, ","))
 		}
 	}
 }

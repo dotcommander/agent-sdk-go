@@ -1,7 +1,10 @@
 package claude
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
@@ -21,10 +24,92 @@ func DefaultClientOptions() *ClientOptions {
 }
 
 // Validate validates the options and returns an error if invalid.
-// Delegates to the shared Options.Validate for canonical validation.
+// Performs comprehensive validation including conflict detection.
 func (o *ClientOptions) Validate() error {
+	// Delegate core validation to shared
 	sharedOpts := o.toSharedOptions()
-	return sharedOpts.Validate()
+	if err := sharedOpts.Validate(); err != nil {
+		return err
+	}
+
+	// Validate OutputFormat if set
+	if o.OutputFormat != nil {
+		if o.OutputFormat.Type == "" {
+			return shared.NewConfigurationError("OutputFormat.Type", "", "output format type is required")
+		}
+		if o.OutputFormat.Type == "json_schema" && o.OutputFormat.Schema == nil {
+			return shared.NewConfigurationError("OutputFormat.Schema", "nil", "JSON schema is required when type is json_schema")
+		}
+	}
+
+	// Validate Sandbox settings if set
+	if o.Sandbox != nil {
+		if o.Sandbox.Type != "" && o.Sandbox.Type != "docker" && o.Sandbox.Type != "nsjail" {
+			return shared.NewConfigurationError("Sandbox.Type", o.Sandbox.Type, "sandbox type must be 'docker' or 'nsjail'")
+		}
+	}
+
+	// Validate agents if set
+	for name, agent := range o.Agents {
+		if name == "" {
+			return shared.NewConfigurationError("Agents", "", "agent name cannot be empty")
+		}
+		if agent.Model != "" && agent.Model != shared.AgentModelSonnet &&
+			agent.Model != shared.AgentModelOpus && agent.Model != shared.AgentModelHaiku &&
+			agent.Model != shared.AgentModelInherit {
+			return shared.NewConfigurationError("Agents["+name+"].Model", string(agent.Model),
+				"agent model must be 'sonnet', 'opus', 'haiku', or 'inherit'")
+		}
+	}
+
+	// Detect conflicting allowed/disallowed tools
+	if err := o.validateToolConflicts(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateToolConflicts checks for tools that appear in both allowed and disallowed lists.
+func (o *ClientOptions) validateToolConflicts() error {
+	var allowedTools, disallowedTools []string
+
+	// Parse CustomArgs to find --allowed-tools and --disallowed-tools
+	for i := 0; i < len(o.CustomArgs); i++ {
+		if o.CustomArgs[i] == "--allowed-tools" && i+1 < len(o.CustomArgs) {
+			allowedTools = append(allowedTools, splitTools(o.CustomArgs[i+1])...)
+		}
+		if o.CustomArgs[i] == "--disallowed-tools" && i+1 < len(o.CustomArgs) {
+			disallowedTools = append(disallowedTools, o.CustomArgs[i+1])
+		}
+	}
+
+	// Check for conflicts
+	for _, allowed := range allowedTools {
+		for _, disallowed := range disallowedTools {
+			if allowed == disallowed {
+				return shared.NewConfigurationError("Tools", allowed,
+					fmt.Sprintf("tool '%s' appears in both allowed and disallowed lists", allowed))
+			}
+		}
+	}
+
+	return nil
+}
+
+// splitTools splits a comma-separated tool list.
+func splitTools(s string) []string {
+	if s == "" {
+		return nil
+	}
+	var result []string
+	for _, t := range strings.Split(s, ",") {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			result = append(result, t)
+		}
+	}
+	return result
 }
 
 // toSharedOptions converts ClientOptions to shared.Options for validation.
@@ -70,9 +155,28 @@ func WithCLICommand(command string) func(*ClientOptions) {
 }
 
 // WithPermissionMode sets the permission mode option.
+// Accepts either a string or shared.PermissionMode constant.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(claude.WithPermissionMode("default"))
 func WithPermissionMode(mode string) func(*ClientOptions) {
 	return func(o *ClientOptions) {
 		o.PermissionMode = mode
+	}
+}
+
+// WithTypedPermissionMode sets the permission mode using typed constants.
+// This provides compile-time safety for permission mode values.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithTypedPermissionMode(shared.PermissionModeAcceptEdits),
+//	)
+func WithTypedPermissionMode(mode shared.PermissionMode) func(*ClientOptions) {
+	return func(o *ClientOptions) {
+		o.PermissionMode = string(mode)
 	}
 }
 
@@ -419,5 +523,387 @@ func WithAgent(agent string) ClientOption {
 func WithFileCheckpointing() ClientOption {
 	return func(o *ClientOptions) {
 		o.CustomArgs = append(o.CustomArgs, "--enable-file-checkpointing")
+	}
+}
+
+// =============================================================================
+// P0 Parity Options - Critical for Python SDK feature parity
+// =============================================================================
+
+// Note: WithAllowedTools is defined in mcp.go for backward compatibility.
+// It restricts Claude to only use the specified tools.
+
+// WithBetas enables beta features for the session.
+// Multiple beta features can be enabled simultaneously.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithBetas("context-1m-2025-08-07"),
+//	)
+func WithBetas(betas ...string) ClientOption {
+	return func(o *ClientOptions) {
+		for _, beta := range betas {
+			o.CustomArgs = append(o.CustomArgs, "--beta", beta)
+		}
+	}
+}
+
+// WithCanUseTool sets a permission callback that is invoked before each tool use.
+// The callback can approve, deny, or modify tool inputs.
+// Errors in the callback default to deny for safety.
+//
+// This enables the control protocol for bidirectional communication.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithCanUseTool(func(ctx context.Context, toolName string, toolInput map[string]any, opts shared.CanUseToolOptions) (shared.PermissionResult, error) {
+//	        if toolName == "Bash" && strings.Contains(toolInput["command"].(string), "rm -rf") {
+//	            return shared.NewPermissionResultDeny("Dangerous command blocked"), nil
+//	        }
+//	        return shared.NewPermissionResultAllow(), nil
+//	    }),
+//	)
+func WithCanUseTool(callback shared.CanUseToolCallback) ClientOption {
+	return func(o *ClientOptions) {
+		o.CanUseTool = callback
+	}
+}
+
+// WithHooks registers multiple hook callbacks at once.
+// The map key is the hook event type (e.g., "PreToolUse", "PostToolUse").
+// This enables the control protocol for bidirectional communication.
+//
+// For type-safe hook registration, prefer WithPreToolUseHook, WithPostToolUseHook, etc.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithHooks(map[shared.HookEvent][]shared.HookConfig{
+//	        shared.HookEventPreToolUse: {
+//	            {
+//	                Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+//	                    // Handle pre-tool-use event
+//	                    return &shared.SyncHookOutput{Continue: true}, nil
+//	                },
+//	            },
+//	        },
+//	    }),
+//	)
+func WithHooks(hooks map[shared.HookEvent][]shared.HookConfig) ClientOption {
+	return func(o *ClientOptions) {
+		o.Hooks = hooks
+	}
+}
+
+// WithHook registers a single hook callback for the specified event.
+// Can be called multiple times to register hooks for different events.
+// Last registration wins for duplicate events.
+//
+// This enables the control protocol for bidirectional communication.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithHook(shared.HookEventPreToolUse, shared.HookConfig{
+//	        Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+//	            return &shared.SyncHookOutput{Continue: true}, nil
+//	        },
+//	    }),
+//	)
+func WithHook(event shared.HookEvent, config shared.HookConfig) ClientOption {
+	return func(o *ClientOptions) {
+		if o.Hooks == nil {
+			o.Hooks = make(map[shared.HookEvent][]shared.HookConfig)
+		}
+		config.Event = event // Ensure event is set
+		o.Hooks[event] = append(o.Hooks[event], config)
+	}
+}
+
+// WithPreToolUseHook is a convenience option for registering a PreToolUse hook.
+// The callback is invoked before each tool use and can approve or block execution.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithPreToolUseHook(func(ctx context.Context, input *shared.PreToolUseHookInput) (*shared.SyncHookOutput, error) {
+//	        if input.ToolName == "Bash" {
+//	            return &shared.SyncHookOutput{Decision: "block", Reason: "Bash not allowed"}, nil
+//	        }
+//	        return &shared.SyncHookOutput{Continue: true}, nil
+//	    }),
+//	)
+func WithPreToolUseHook(fn func(ctx context.Context, input *shared.PreToolUseHookInput) (*shared.SyncHookOutput, error)) ClientOption {
+	return WithHook(shared.HookEventPreToolUse, shared.HookConfig{
+		Event: shared.HookEventPreToolUse,
+		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+			if typedInput, ok := input.(*shared.PreToolUseHookInput); ok {
+				return fn(ctx, typedInput)
+			}
+			// Fail-closed for type mismatch
+			return &shared.SyncHookOutput{Decision: "block", Reason: "invalid input type"}, nil
+		},
+	})
+}
+
+// WithPostToolUseHook is a convenience option for registering a PostToolUse hook.
+// The callback is invoked after each successful tool use.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithPostToolUseHook(func(ctx context.Context, input *shared.PostToolUseHookInput) (*shared.SyncHookOutput, error) {
+//	        log.Printf("Tool %s completed with result: %v", input.ToolName, input.ToolResponse)
+//	        return &shared.SyncHookOutput{Continue: true}, nil
+//	    }),
+//	)
+func WithPostToolUseHook(fn func(ctx context.Context, input *shared.PostToolUseHookInput) (*shared.SyncHookOutput, error)) ClientOption {
+	return WithHook(shared.HookEventPostToolUse, shared.HookConfig{
+		Event: shared.HookEventPostToolUse,
+		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+			if typedInput, ok := input.(*shared.PostToolUseHookInput); ok {
+				return fn(ctx, typedInput)
+			}
+			return &shared.SyncHookOutput{Continue: true}, nil
+		},
+	})
+}
+
+// WithSessionStartHook is a convenience option for registering a SessionStart hook.
+// The callback is invoked when a session starts or resumes.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithSessionStartHook(func(ctx context.Context, input *shared.SessionStartHookInput) (*shared.SyncHookOutput, error) {
+//	        log.Printf("Session started: %s", input.SessionID)
+//	        return &shared.SyncHookOutput{Continue: true}, nil
+//	    }),
+//	)
+func WithSessionStartHook(fn func(ctx context.Context, input *shared.SessionStartHookInput) (*shared.SyncHookOutput, error)) ClientOption {
+	return WithHook(shared.HookEventSessionStart, shared.HookConfig{
+		Event: shared.HookEventSessionStart,
+		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+			if typedInput, ok := input.(*shared.SessionStartHookInput); ok {
+				return fn(ctx, typedInput)
+			}
+			return &shared.SyncHookOutput{Continue: true}, nil
+		},
+	})
+}
+
+// WithSessionEndHook is a convenience option for registering a SessionEnd hook.
+// The callback is invoked when a session ends.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithSessionEndHook(func(ctx context.Context, input *shared.SessionEndHookInput) (*shared.SyncHookOutput, error) {
+//	        log.Printf("Session ended: %s, reason: %s", input.SessionID, input.Reason)
+//	        return &shared.SyncHookOutput{Continue: true}, nil
+//	    }),
+//	)
+func WithSessionEndHook(fn func(ctx context.Context, input *shared.SessionEndHookInput) (*shared.SyncHookOutput, error)) ClientOption {
+	return WithHook(shared.HookEventSessionEnd, shared.HookConfig{
+		Event: shared.HookEventSessionEnd,
+		Handler: func(ctx context.Context, input any) (*shared.SyncHookOutput, error) {
+			if typedInput, ok := input.(*shared.SessionEndHookInput); ok {
+				return fn(ctx, typedInput)
+			}
+			return &shared.SyncHookOutput{Continue: true}, nil
+		},
+	})
+}
+
+// =============================================================================
+// P0 Remaining: Structured Output Options
+// =============================================================================
+
+// WithJSONSchema sets a JSON schema for Claude's structured output.
+// When set, Claude's response will conform to the provided schema.
+//
+// Example:
+//
+//	schema := map[string]any{
+//	    "type": "object",
+//	    "properties": map[string]any{
+//	        "name": map[string]any{"type": "string"},
+//	        "age":  map[string]any{"type": "number"},
+//	    },
+//	    "required": []string{"name", "age"},
+//	}
+//	client, _ := claude.NewClient(
+//	    claude.WithJSONSchema(schema),
+//	)
+func WithJSONSchema(schema map[string]any) ClientOption {
+	return func(o *ClientOptions) {
+		o.OutputFormat = &shared.OutputFormat{
+			Type:   "json_schema",
+			Schema: schema,
+		}
+	}
+}
+
+// WithOutputFormat sets the output format configuration directly.
+// For JSON schema output, prefer WithJSONSchema() for convenience.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithOutputFormat(&shared.OutputFormat{
+//	        Type:   "json_schema",
+//	        Schema: mySchema,
+//	    }),
+//	)
+func WithOutputFormat(format *shared.OutputFormat) ClientOption {
+	return func(o *ClientOptions) {
+		o.OutputFormat = format
+	}
+}
+
+// =============================================================================
+// P1 Options: Aliases and Additional Features
+// =============================================================================
+
+// WithCwd is an alias for WithWorkingDirectory for severity1 SDK compatibility.
+// Sets the working directory for the session.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(claude.WithCwd("/tmp"))
+func WithCwd(path string) ClientOption {
+	return WithWorkingDirectory(path)
+}
+
+// WithAddDirs is an alias for WithAdditionalDirectories for severity1 SDK compatibility.
+// Adds directories that Claude can access.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(claude.WithAddDirs("/data", "/logs"))
+func WithAddDirs(dirs ...string) ClientOption {
+	return WithAdditionalDirectories(dirs...)
+}
+
+// WithForkSession creates a new session forked from an existing session.
+// The fork includes conversation history up to the fork point.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithForkSession("session-uuid-here"),
+//	)
+func WithForkSession(sessionID string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--resume", sessionID, "--fork")
+	}
+}
+
+// WithFallbackModel sets a fallback model to use if the primary model is unavailable.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithModel("claude-opus-4"),
+//	    claude.WithFallbackModel("claude-sonnet-4"),
+//	)
+func WithFallbackModel(model string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--fallback-model", model)
+	}
+}
+
+// WithUser sets a user identifier for usage tracking in multi-tenant scenarios.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithUser("user-12345"),
+//	)
+func WithUser(userID string) ClientOption {
+	return func(o *ClientOptions) {
+		o.CustomArgs = append(o.CustomArgs, "--user", userID)
+	}
+}
+
+// WithDebugWriter sets a writer for debug output from the CLI subprocess.
+// If nil (default), stderr is suppressed or isolated.
+//
+// Example:
+//
+//	var debugBuf bytes.Buffer
+//	client, _ := claude.NewClient(
+//	    claude.WithDebugWriter(&debugBuf),
+//	)
+func WithDebugWriter(w io.Writer) ClientOption {
+	return func(o *ClientOptions) {
+		o.DebugWriter = w
+	}
+}
+
+// WithStderrCallback sets a callback for stderr output from the CLI subprocess.
+// The callback is invoked for each line of stderr output.
+// Takes precedence over DebugWriter if both are set.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithStderrCallback(func(line string) {
+//	        log.Printf("Claude stderr: %s", line)
+//	    }),
+//	)
+func WithStderrCallback(fn func(string)) ClientOption {
+	return func(o *ClientOptions) {
+		o.StderrCallback = fn
+	}
+}
+
+// WithAgents registers multiple agent definitions at once.
+// Agent definitions specify custom subagents with their own model and tool configurations.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithAgents(map[string]shared.AgentDefinition{
+//	        "coder":    {Description: "Code writer", Model: shared.AgentModelSonnet},
+//	        "reviewer": {Description: "Code reviewer", Model: shared.AgentModelOpus},
+//	    }),
+//	)
+func WithAgents(agents map[string]shared.AgentDefinition) ClientOption {
+	return func(o *ClientOptions) {
+		o.Agents = agents
+	}
+}
+
+// WithSettingSources controls where Claude loads settings from.
+// Sources are applied in order (precedence).
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithSettingSources(shared.SettingSourceUser, shared.SettingSourceProject),
+//	)
+func WithSettingSources(sources ...shared.SettingSource) ClientOption {
+	return func(o *ClientOptions) {
+		o.SettingSources = sources
+	}
+}
+
+// WithSandboxSettings configures sandbox behavior for bash command execution.
+//
+// Example:
+//
+//	client, _ := claude.NewClient(
+//	    claude.WithSandboxSettings(&shared.SandboxSettings{
+//	        Enabled:              true,
+//	        AutoAllowBashIfSandboxed: true,
+//	        ExcludedCommands:     []string{"ls", "cat"},
+//	    }),
+//	)
+func WithSandboxSettings(settings *shared.SandboxSettings) ClientOption {
+	return func(o *ClientOptions) {
+		o.Sandbox = settings
 	}
 }

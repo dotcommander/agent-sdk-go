@@ -2,6 +2,8 @@ package claude
 
 import (
 	"context"
+	"io"
+
 	"github.com/dotcommander/agent-sdk-go/claude/parser"
 	"github.com/dotcommander/agent-sdk-go/claude/shared"
 )
@@ -32,6 +34,36 @@ type ClientOptions struct {
 
 	// McpServers are MCP server configurations.
 	McpServers map[string]shared.McpServerConfig
+
+	// CanUseTool is a callback for runtime permission checks.
+	// Invoked before each tool use when permission mode requires it.
+	// Enables control protocol for bidirectional communication.
+	CanUseTool shared.CanUseToolCallback
+
+	// Hooks contains hook configurations keyed by event type.
+	// Enables control protocol for bidirectional communication.
+	Hooks map[shared.HookEvent][]shared.HookConfig
+
+	// OutputFormat specifies structured output format with JSON schema.
+	// When set, Claude's response will conform to the provided schema.
+	OutputFormat *shared.OutputFormat
+
+	// DebugWriter specifies where to write debug output from the CLI subprocess.
+	// If nil (default), stderr is suppressed or isolated.
+	DebugWriter io.Writer
+
+	// StderrCallback receives CLI stderr output line-by-line.
+	// If set, takes precedence over DebugWriter for stderr handling.
+	StderrCallback func(string)
+
+	// Agents are custom subagent definitions.
+	Agents map[string]shared.AgentDefinition
+
+	// SettingSources controls which settings to load.
+	SettingSources []shared.SettingSource
+
+	// Sandbox is sandbox configuration for bash command execution.
+	Sandbox *shared.SandboxSettings
 }
 
 // BasicTransport provides core transport functionality.

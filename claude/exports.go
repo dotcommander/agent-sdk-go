@@ -204,6 +204,17 @@ const (
 // AgentDefinition defines a custom subagent.
 type AgentDefinition = shared.AgentDefinition
 
+// AgentModel represents the model to use for an agent.
+type AgentModel = shared.AgentModel
+
+// Agent model constants.
+const (
+	AgentModelSonnet  = shared.AgentModelSonnet
+	AgentModelOpus    = shared.AgentModelOpus
+	AgentModelHaiku   = shared.AgentModelHaiku
+	AgentModelInherit = shared.AgentModelInherit
+)
+
 // McpServerConfig defines MCP server configuration.
 type McpServerConfig = shared.McpServerConfig
 
@@ -218,6 +229,13 @@ type SandboxSettings = shared.SandboxSettings
 
 // SettingSource defines which settings to load.
 type SettingSource = shared.SettingSource
+
+// Setting source constants.
+const (
+	SettingSourceUser    = shared.SettingSourceUser
+	SettingSourceProject = shared.SettingSourceProject
+	SettingSourceLocal   = shared.SettingSourceLocal
+)
 
 // ToolsConfig defines tools configuration (preset or explicit list).
 type ToolsConfig = shared.ToolsConfig

@@ -244,12 +244,34 @@ func TestWithSdkMcpServer(t *testing.T) {
 func TestWithAllowedTools(t *testing.T) {
 	t.Parallel()
 
-	t.Run("adds tools to custom args", func(t *testing.T) {
+	t.Run("adds tools to custom args with comma-separated list", func(t *testing.T) {
 		opts := &ClientOptions{}
 		WithAllowedTools("mcp__calc__add", "mcp__calc__sqrt")(opts)
 
 		assert.Contains(t, opts.CustomArgs, "--allowed-tools")
-		assert.Contains(t, opts.CustomArgs, "mcp__calc__add")
-		assert.Contains(t, opts.CustomArgs, "mcp__calc__sqrt")
+		assert.Contains(t, opts.CustomArgs, "mcp__calc__add,mcp__calc__sqrt")
+	})
+
+	t.Run("standard tools work", func(t *testing.T) {
+		opts := &ClientOptions{}
+		WithAllowedTools("Read", "Write", "Bash")(opts)
+
+		assert.Contains(t, opts.CustomArgs, "--allowed-tools")
+		assert.Contains(t, opts.CustomArgs, "Read,Write,Bash")
+	})
+
+	t.Run("empty tools list does not add flag", func(t *testing.T) {
+		opts := &ClientOptions{}
+		WithAllowedTools()(opts)
+
+		assert.NotContains(t, opts.CustomArgs, "--allowed-tools")
+	})
+
+	t.Run("single tool works", func(t *testing.T) {
+		opts := &ClientOptions{}
+		WithAllowedTools("Read")(opts)
+
+		assert.Contains(t, opts.CustomArgs, "--allowed-tools")
+		assert.Contains(t, opts.CustomArgs, "Read")
 	})
 }

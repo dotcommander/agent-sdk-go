@@ -59,6 +59,18 @@ func (c *ClientImpl) Connect(ctx context.Context) error {
 		CustomArgs:   c.options.CustomArgs,
 		Env:          c.options.Env,
 		McpServers:   c.options.McpServers,
+		CanUseTool:   c.options.CanUseTool,
+	}
+
+	// Convert hooks from shared.HookConfig to transport's ProtocolHookMatcher
+	if len(c.options.Hooks) > 0 {
+		transportConfig.ProtocolHooks = convertHooksToProtocolFormat(c.options.Hooks)
+		transportConfig.EnableControlProtocol = true
+	}
+
+	// Enable control protocol if permission callback is set
+	if c.options.CanUseTool != nil {
+		transportConfig.EnableControlProtocol = true
 	}
 
 	var err error
@@ -76,6 +88,47 @@ func (c *ClientImpl) Connect(ctx context.Context) error {
 	c.validator = shared.NewStreamValidator()
 
 	return nil
+}
+
+// convertHooksToProtocolFormat converts shared.HookConfig to subprocess.ProtocolHookMatcher.
+// This bridges the client-level hook API to the transport-level protocol format.
+func convertHooksToProtocolFormat(hooks map[shared.HookEvent][]shared.HookConfig) map[shared.HookEvent][]subprocess.ProtocolHookMatcher {
+	result := make(map[shared.HookEvent][]subprocess.ProtocolHookMatcher)
+
+	for event, configs := range hooks {
+		var matchers []subprocess.ProtocolHookMatcher
+
+		for _, config := range configs {
+			// Capture handler in local variable for closure
+			handler := config.Handler
+			configMatcher := config.Matcher
+			configTimeout := config.Timeout
+
+			// Convert each HookConfig to a ProtocolHookMatcher
+			matcher := subprocess.ProtocolHookMatcher{
+				Matcher: configMatcher,
+				Hooks: []subprocess.ProtocolHookCallback{
+					func(ctx context.Context, input any, toolUseID *string) (*shared.SyncHookOutput, error) {
+						return handler(ctx, input)
+					},
+				},
+			}
+
+			// Convert timeout if set
+			if configTimeout > 0 {
+				timeoutSec := configTimeout.Seconds()
+				matcher.Timeout = &timeoutSec
+			}
+
+			matchers = append(matchers, matcher)
+		}
+
+		if len(matchers) > 0 {
+			result[event] = matchers
+		}
+	}
+
+	return result
 }
 
 // Disconnect closes the connection to Claude CLI.
