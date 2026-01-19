@@ -429,71 +429,9 @@ func (t *Transport) Connect(ctx context.Context) error {
 }
 
 // buildArgs builds the CLI arguments based on the transport mode.
+// This is a thin wrapper around BuildArgs for backwards compatibility.
 func (t *Transport) buildArgs() []string {
-	var args []string
-
-	if t.promptArg != nil {
-		// One-shot mode: -p flag enables print mode, prompt is positional arg at end
-		// --verbose is required for stream-json output in print mode
-		args = append(args, "-p", "--output-format", "stream-json", "--verbose")
-	} else {
-		// Interactive mode: use streaming JSON for both input and output
-		args = append(args, "--output-format", "stream-json", "--input-format", "stream-json")
-	}
-
-	// Add model
-	args = append(args, "--model", t.model)
-
-	// Add system prompt if set
-	if t.systemPrompt != "" {
-		args = append(args, "--system-prompt", t.systemPrompt)
-	}
-
-	// Add custom args
-	args = append(args, t.customArgs...)
-
-	// Add tools configuration
-	if t.tools != nil {
-		switch t.tools.Type {
-		case "preset":
-			// Preset: --tools=preset:claude_code
-			if t.tools.Preset != "" {
-				args = append(args, fmt.Sprintf("--tools=preset:%s", t.tools.Preset))
-			}
-		case "explicit":
-			// Explicit list: --allowed-tools=Read,Write,Bash
-			if len(t.tools.Tools) > 0 {
-				args = append(args, fmt.Sprintf("--allowed-tools=%s", strings.Join(t.tools.Tools, ",")))
-			}
-		}
-	}
-
-	// MCP servers
-	if len(t.mcpServers) > 0 {
-		serversForCLI := make(map[string]interface{})
-		for name, config := range t.mcpServers {
-			if sdkConfig, ok := config.(shared.McpSdkServerConfig); ok {
-				// For SDK servers, pass everything except instance
-				serversForCLI[name] = map[string]interface{}{
-					"type": sdkConfig.Type,
-					"name": sdkConfig.Name,
-				}
-			} else {
-				serversForCLI[name] = config
-			}
-		}
-		if len(serversForCLI) > 0 {
-			mcpJSON, _ := json.Marshal(map[string]interface{}{"mcpServers": serversForCLI})
-			args = append(args, "--mcp-config", string(mcpJSON))
-		}
-	}
-
-	// In one-shot mode, prompt goes last as positional argument
-	if t.promptArg != nil {
-		args = append(args, *t.promptArg)
-	}
-
-	return args
+	return BuildArgs(t.model, t.systemPrompt, t.customArgs, t.tools, t.mcpServers, t.promptArg)
 }
 
 // buildEnv builds the environment variables for the subprocess.
