@@ -158,12 +158,15 @@ func (e *HookExecutor) executeWithProtection(ctx context.Context, hook shared.Ho
 }
 
 // BuildTypedInput constructs a typed hook input struct from a HookEventMessage.
-// This converts the generic message into the appropriate typed input for the event type.
+// This is the canonical implementation for converting hook event data to typed inputs.
+// Both streaming hooks (via HookExecutor) and control protocol hooks (via Protocol)
+// should use this function to ensure consistent behavior.
 func BuildTypedInput(msg *shared.HookEventMessage) (any, error) {
 	base := shared.BaseHookInput{
 		SessionID:      msg.SessionID,
 		TranscriptPath: msg.TranscriptPath,
 		Cwd:            msg.Cwd,
+		PermissionMode: msg.PermissionMode,
 	}
 
 	switch shared.HookEvent(msg.HookEventName) {
@@ -200,12 +203,16 @@ func BuildTypedInput(msg *shared.HookEventMessage) (any, error) {
 		return &shared.SessionStartHookInput{
 			BaseHookInput: base,
 			HookEventName: msg.HookEventName,
+			Source:        msg.Source,
+			AgentType:     msg.AgentType,
+			Model:         msg.Model,
 		}, nil
 
 	case shared.HookEventSessionEnd:
 		return &shared.SessionEndHookInput{
 			BaseHookInput: base,
 			HookEventName: msg.HookEventName,
+			Reason:        msg.Reason,
 		}, nil
 
 	case shared.HookEventPermissionRequest:
@@ -218,38 +225,50 @@ func BuildTypedInput(msg *shared.HookEventMessage) (any, error) {
 
 	case shared.HookEventNotification:
 		return &shared.NotificationHookInput{
-			BaseHookInput: base,
-			HookEventName: msg.HookEventName,
+			BaseHookInput:    base,
+			HookEventName:    msg.HookEventName,
+			Message:          msg.Message,
+			Title:            msg.Title,
+			NotificationType: msg.NotificationType,
 		}, nil
 
 	case shared.HookEventUserPromptSubmit:
 		return &shared.UserPromptSubmitHookInput{
 			BaseHookInput: base,
 			HookEventName: msg.HookEventName,
+			Prompt:        msg.Prompt,
 		}, nil
 
 	case shared.HookEventStop:
 		return &shared.StopHookInput{
-			BaseHookInput: base,
-			HookEventName: msg.HookEventName,
+			BaseHookInput:  base,
+			HookEventName:  msg.HookEventName,
+			StopHookActive: msg.StopHookActive,
 		}, nil
 
 	case shared.HookEventSubagentStart:
 		return &shared.SubagentStartHookInput{
 			BaseHookInput: base,
 			HookEventName: msg.HookEventName,
+			AgentID:       msg.AgentID,
+			AgentType:     msg.AgentType,
 		}, nil
 
 	case shared.HookEventSubagentStop:
 		return &shared.SubagentStopHookInput{
-			BaseHookInput: base,
-			HookEventName: msg.HookEventName,
+			BaseHookInput:       base,
+			HookEventName:       msg.HookEventName,
+			StopHookActive:      msg.StopHookActive,
+			AgentID:             msg.AgentID,
+			AgentTranscriptPath: msg.AgentTranscriptPath,
 		}, nil
 
 	case shared.HookEventPreCompact:
 		return &shared.PreCompactHookInput{
-			BaseHookInput: base,
-			HookEventName: msg.HookEventName,
+			BaseHookInput:      base,
+			HookEventName:      msg.HookEventName,
+			Trigger:            msg.Trigger,
+			CustomInstructions: msg.CustomInstructions,
 		}, nil
 
 	default:

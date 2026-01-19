@@ -199,17 +199,46 @@ func (c *HookConfig) MatchesToolName(toolName string) bool {
 }
 
 // HookEventMessage represents a hook event message from the CLI.
+// This is the canonical representation of all hook event data.
 type HookEventMessage struct {
 	Type           string         `json:"type"` // "hook_event"
 	HookEventName  string         `json:"hook_event_name"`
 	SessionID      string         `json:"session_id"`
 	TranscriptPath string         `json:"transcript_path"`
 	Cwd            string         `json:"cwd"`
+	PermissionMode string         `json:"permission_mode,omitempty"`
 	ToolName       string         `json:"tool_name,omitempty"`
 	ToolInput      map[string]any `json:"tool_input,omitempty"`
 	ToolUseID      string         `json:"tool_use_id,omitempty"`
 	ToolResponse   any            `json:"tool_response,omitempty"`
 	Error          string         `json:"error,omitempty"`
+
+	// UserPromptSubmit fields
+	Prompt string `json:"prompt,omitempty"`
+
+	// Stop/SubagentStop fields
+	StopHookActive bool `json:"stop_hook_active,omitempty"`
+
+	// PreCompact fields
+	Trigger            string  `json:"trigger,omitempty"`
+	CustomInstructions *string `json:"custom_instructions,omitempty"`
+
+	// SessionStart fields
+	Source    string `json:"source,omitempty"`
+	AgentType string `json:"agent_type,omitempty"`
+	Model     string `json:"model,omitempty"`
+
+	// SessionEnd fields
+	Reason string `json:"reason,omitempty"`
+
+	// Notification fields
+	Message          string `json:"message,omitempty"`
+	Title            string `json:"title,omitempty"`
+	NotificationType string `json:"notification_type,omitempty"`
+
+	// SubagentStart/SubagentStop fields
+	AgentID             string `json:"agent_id,omitempty"`
+	AgentTranscriptPath string `json:"agent_transcript_path,omitempty"`
 }
 
 // HookOutput represents the response sent back to the CLI after hook execution.

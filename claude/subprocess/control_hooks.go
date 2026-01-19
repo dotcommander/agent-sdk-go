@@ -96,106 +96,67 @@ func (p *Protocol) handleHookCallbackRequest(ctx context.Context, requestID stri
 
 // parseHookInput creates the appropriate typed input based on event type.
 // Returns the strongly-typed input struct for the callback.
+// This delegates to BuildTypedInput to ensure consistent behavior across
+// both streaming hooks and control protocol hooks.
 func (p *Protocol) parseHookInput(event shared.HookEvent, inputData map[string]any) any {
-	// Parse base fields
-	base := shared.BaseHookInput{
+	// Build HookEventMessage from raw input data
+	msg := buildHookEventMessage(event, inputData)
+
+	// Use the canonical BuildTypedInput function
+	typedInput, err := BuildTypedInput(msg)
+	if err != nil {
+		// Forward compatibility - return raw input for unknown events
+		return inputData
+	}
+	return typedInput
+}
+
+// buildHookEventMessage constructs a HookEventMessage from raw input data.
+// This extracts all fields from the map into the canonical message struct.
+func buildHookEventMessage(event shared.HookEvent, inputData map[string]any) *shared.HookEventMessage {
+	return &shared.HookEventMessage{
+		Type:          "hook_event",
+		HookEventName: string(event),
+
+		// Base fields
 		SessionID:      getString(inputData, "session_id"),
 		TranscriptPath: getString(inputData, "transcript_path"),
 		Cwd:            getString(inputData, "cwd"),
 		PermissionMode: getString(inputData, "permission_mode"),
-	}
 
-	switch event {
-	case shared.HookEventPreToolUse:
-		return &shared.PreToolUseHookInput{
-			BaseHookInput: base,
-			HookEventName: "PreToolUse",
-			ToolName:      getString(inputData, "tool_name"),
-			ToolInput:     getMap(inputData, "tool_input"),
-			ToolUseID:     getString(inputData, "tool_use_id"),
-		}
-	case shared.HookEventPostToolUse:
-		return &shared.PostToolUseHookInput{
-			BaseHookInput: base,
-			HookEventName: "PostToolUse",
-			ToolName:      getString(inputData, "tool_name"),
-			ToolInput:     getMap(inputData, "tool_input"),
-			ToolResponse:  inputData["tool_response"],
-			ToolUseID:     getString(inputData, "tool_use_id"),
-		}
-	case shared.HookEventPostToolUseFailure:
-		return &shared.PostToolUseFailureHookInput{
-			BaseHookInput: base,
-			HookEventName: "PostToolUseFailure",
-			ToolName:      getString(inputData, "tool_name"),
-			ToolInput:     getMap(inputData, "tool_input"),
-			ToolUseID:     getString(inputData, "tool_use_id"),
-			Error:         getString(inputData, "error"),
-		}
-	case shared.HookEventUserPromptSubmit:
-		return &shared.UserPromptSubmitHookInput{
-			BaseHookInput: base,
-			HookEventName: "UserPromptSubmit",
-			Prompt:        getString(inputData, "prompt"),
-		}
-	case shared.HookEventStop:
-		return &shared.StopHookInput{
-			BaseHookInput:  base,
-			HookEventName:  "Stop",
-			StopHookActive: getBool(inputData, "stop_hook_active"),
-		}
-	case shared.HookEventSubagentStop:
-		return &shared.SubagentStopHookInput{
-			BaseHookInput:  base,
-			HookEventName:  "SubagentStop",
-			StopHookActive: getBool(inputData, "stop_hook_active"),
-		}
-	case shared.HookEventPreCompact:
-		return &shared.PreCompactHookInput{
-			BaseHookInput:      base,
-			HookEventName:      "PreCompact",
-			Trigger:            getString(inputData, "trigger"),
-			CustomInstructions: getStringPtr(inputData, "custom_instructions"),
-		}
-	case shared.HookEventSessionStart:
-		return &shared.SessionStartHookInput{
-			BaseHookInput: base,
-			HookEventName: "SessionStart",
-			Source:        getString(inputData, "source"),
-			AgentType:     getString(inputData, "agent_type"),
-			Model:         getString(inputData, "model"),
-		}
-	case shared.HookEventSessionEnd:
-		return &shared.SessionEndHookInput{
-			BaseHookInput: base,
-			HookEventName: "SessionEnd",
-			Reason:        getString(inputData, "reason"),
-		}
-	case shared.HookEventNotification:
-		return &shared.NotificationHookInput{
-			BaseHookInput:    base,
-			HookEventName:    "Notification",
-			Message:          getString(inputData, "message"),
-			Title:            getString(inputData, "title"),
-			NotificationType: getString(inputData, "notification_type"),
-		}
-	case shared.HookEventSubagentStart:
-		return &shared.SubagentStartHookInput{
-			BaseHookInput: base,
-			HookEventName: "SubagentStart",
-			AgentID:       getString(inputData, "agent_id"),
-			AgentType:     getString(inputData, "agent_type"),
-		}
-	case shared.HookEventPermissionRequest:
-		return &shared.PermissionRequestHookInput{
-			BaseHookInput: base,
-			HookEventName: "PermissionRequest",
-			ToolName:      getString(inputData, "tool_name"),
-			ToolInput:     inputData["tool_input"],
-		}
-	default:
-		// Forward compatibility - return raw input for unknown events
-		return inputData
+		// Tool-related fields
+		ToolName:     getString(inputData, "tool_name"),
+		ToolInput:    getMap(inputData, "tool_input"),
+		ToolUseID:    getString(inputData, "tool_use_id"),
+		ToolResponse: inputData["tool_response"],
+		Error:        getString(inputData, "error"),
+
+		// UserPromptSubmit fields
+		Prompt: getString(inputData, "prompt"),
+
+		// Stop/SubagentStop fields
+		StopHookActive: getBool(inputData, "stop_hook_active"),
+
+		// PreCompact fields
+		Trigger:            getString(inputData, "trigger"),
+		CustomInstructions: getStringPtr(inputData, "custom_instructions"),
+
+		// SessionStart fields
+		Source:    getString(inputData, "source"),
+		AgentType: getString(inputData, "agent_type"),
+		Model:     getString(inputData, "model"),
+
+		// SessionEnd fields
+		Reason: getString(inputData, "reason"),
+
+		// Notification fields
+		Message:          getString(inputData, "message"),
+		Title:            getString(inputData, "title"),
+		NotificationType: getString(inputData, "notification_type"),
+
+		// SubagentStart/SubagentStop fields
+		AgentID:             getString(inputData, "agent_id"),
+		AgentTranscriptPath: getString(inputData, "agent_transcript_path"),
 	}
 }
 
