@@ -101,6 +101,12 @@ type JSONDecodeError = shared.JSONDecodeError
 // MessageParseError represents message structure parsing failures.
 type MessageParseError = shared.MessageParseError
 
+// PermissionError indicates a tool or file access was denied.
+type PermissionError = shared.PermissionError
+
+// ModelError indicates a model is unavailable or invalid.
+type ModelError = shared.ModelError
+
 // Re-export As*Error helpers for error extraction from wrapped chains.
 
 // AsCLINotFoundError extracts a CLINotFoundError from the error chain.
@@ -127,17 +133,35 @@ var AsJSONDecodeError = shared.AsJSONDecodeError
 // AsMessageParseError extracts a MessageParseError from the error chain.
 var AsMessageParseError = shared.AsMessageParseError
 
+// AsPermissionError extracts a PermissionError from the error chain.
+var AsPermissionError = shared.AsPermissionError
+
+// AsModelError extracts a ModelError from the error chain.
+var AsModelError = shared.AsModelError
+
 // IsJSONDecodeError checks if an error is a JSONDecodeError.
 var IsJSONDecodeError = shared.IsJSONDecodeError
 
 // IsMessageParseError checks if an error is a MessageParseError.
 var IsMessageParseError = shared.IsMessageParseError
 
+// IsPermissionError checks if an error is a PermissionError.
+var IsPermissionError = shared.IsPermissionError
+
+// IsModelError checks if an error is a ModelError.
+var IsModelError = shared.IsModelError
+
 // NewJSONDecodeError creates a new JSONDecodeError.
 var NewJSONDecodeError = shared.NewJSONDecodeError
 
 // NewMessageParseError creates a new MessageParseError.
 var NewMessageParseError = shared.NewMessageParseError
+
+// NewPermissionError creates a new PermissionError.
+var NewPermissionError = shared.NewPermissionError
+
+// NewModelError creates a new ModelError.
+var NewModelError = shared.NewModelError
 
 // Re-export shared types commonly used with hooks and permissions.
 

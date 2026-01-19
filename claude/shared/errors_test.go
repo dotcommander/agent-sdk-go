@@ -319,6 +319,16 @@ func TestSDKErrorInterface(t *testing.T) {
 			err:      NewMessageParseError(nil, "type", "reason"),
 			wantType: "message_parse",
 		},
+		{
+			name:     "PermissionError",
+			err:      NewPermissionError("Bash", "/path", "execute", "reason"),
+			wantType: "permission",
+		},
+		{
+			name:     "ModelError",
+			err:      NewModelError("claude-invalid", "reason", nil),
+			wantType: "model",
+		},
 	}
 
 	for _, tt := range tests {
@@ -563,6 +573,30 @@ func TestIsNewErrorTypeHelpers(t *testing.T) {
 			checker: IsMessageParseError,
 			want:    false,
 		},
+		{
+			name:    "IsPermissionError positive",
+			err:     NewPermissionError("Bash", "", "execute", "command blocked"),
+			checker: IsPermissionError,
+			want:    true,
+		},
+		{
+			name:    "IsPermissionError negative",
+			err:     errors.New("random"),
+			checker: IsPermissionError,
+			want:    false,
+		},
+		{
+			name:    "IsModelError positive",
+			err:     NewModelError("claude-invalid", "model not found", nil),
+			checker: IsModelError,
+			want:    true,
+		},
+		{
+			name:    "IsModelError negative",
+			err:     errors.New("random"),
+			checker: IsModelError,
+			want:    false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -571,5 +605,94 @@ func TestIsNewErrorTypeHelpers(t *testing.T) {
 				t.Errorf("checker() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPermissionError(t *testing.T) {
+	err := NewPermissionError("Bash", "/etc/passwd", "read", "file access denied")
+
+	msg := err.Error()
+	if !strings.Contains(msg, "permission denied") {
+		t.Error("Error message should contain base message")
+	}
+	if !strings.Contains(msg, "Bash") {
+		t.Error("Error message should contain tool name")
+	}
+	if !strings.Contains(msg, "/etc/passwd") {
+		t.Error("Error message should contain path")
+	}
+	if !strings.Contains(msg, "read") {
+		t.Error("Error message should contain operation")
+	}
+	if !strings.Contains(msg, "file access denied") {
+		t.Error("Error message should contain reason")
+	}
+
+	// Test Type() method
+	if err.Type() != "permission" {
+		t.Errorf("Type() = %q, want %q", err.Type(), "permission")
+	}
+}
+
+func TestModelError(t *testing.T) {
+	supported := []string{"claude-sonnet-4", "claude-opus-4", "claude-haiku"}
+	err := NewModelError("claude-invalid-99", "model not available", supported)
+
+	msg := err.Error()
+	if !strings.Contains(msg, "model error") {
+		t.Error("Error message should contain base message")
+	}
+	if !strings.Contains(msg, "claude-invalid-99") {
+		t.Error("Error message should contain model name")
+	}
+	if !strings.Contains(msg, "model not available") {
+		t.Error("Error message should contain reason")
+	}
+	if !strings.Contains(msg, "claude-sonnet-4") {
+		t.Error("Error message should contain supported models")
+	}
+
+	// Test Type() method
+	if err.Type() != "model" {
+		t.Errorf("Type() = %q, want %q", err.Type(), "model")
+	}
+}
+
+func TestPermissionErrorAsExtraction(t *testing.T) {
+	err := NewPermissionError("Write", "/root/file", "write", "denied")
+
+	permErr, ok := AsPermissionError(err)
+	if !ok {
+		t.Error("AsPermissionError should return true for PermissionError")
+	}
+	if permErr.Tool != "Write" {
+		t.Errorf("Tool = %q, want %q", permErr.Tool, "Write")
+	}
+
+	// Test with non-PermissionError
+	_, ok = AsPermissionError(errors.New("random"))
+	if ok {
+		t.Error("AsPermissionError should return false for non-PermissionError")
+	}
+}
+
+func TestModelErrorAsExtraction(t *testing.T) {
+	err := NewModelError("claude-test", "unavailable", []string{"claude-sonnet-4"})
+
+	modelErr, ok := AsModelError(err)
+	if !ok {
+		t.Error("AsModelError should return true for ModelError")
+	}
+	if modelErr.Model != "claude-test" {
+		t.Errorf("Model = %q, want %q", modelErr.Model, "claude-test")
+	}
+	if len(modelErr.SupportedModels) != 1 {
+		t.Errorf("SupportedModels length = %d, want 1", len(modelErr.SupportedModels))
+	}
+
+	// Test with non-ModelError
+	_, ok = AsModelError(errors.New("random"))
+	if ok {
+		t.Error("AsModelError should return false for non-ModelError")
 	}
 }

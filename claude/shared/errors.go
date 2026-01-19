@@ -440,6 +440,76 @@ func NewMessageParseError(data any, messageType, reason string) *MessageParseErr
 	}
 }
 
+// PermissionError indicates a tool or file access was denied.
+type PermissionError struct {
+	BaseError
+	Tool      string // Tool that was denied (if applicable)
+	Path      string // Path that was denied (if applicable)
+	Operation string // Operation that was denied (e.g., "read", "write", "execute")
+}
+
+// Error returns a descriptive error message for PermissionError.
+func (e *PermissionError) Error() string {
+	return NewErrorBuilder("permission denied").
+		Field("tool", e.Tool, true).
+		Field("path", e.Path, true).
+		Field("operation", e.Operation, false).
+		Reason(&e.BaseError).
+		String()
+}
+
+// Type returns the error type for SDKError compliance.
+func (e *PermissionError) Type() string { return "permission" }
+
+// NewPermissionError creates a new PermissionError.
+func NewPermissionError(tool, path, operation, reason string) *PermissionError {
+	return &PermissionError{
+		BaseError: BaseError{Reason: reason},
+		Tool:      tool,
+		Path:      path,
+		Operation: operation,
+	}
+}
+
+// ModelError indicates a model is unavailable or invalid.
+type ModelError struct {
+	BaseError
+	Model           string   // The model that failed
+	SupportedModels []string // List of supported models (if known)
+}
+
+// Error returns a descriptive error message for ModelError.
+func (e *ModelError) Error() string {
+	eb := NewErrorBuilder("model error").
+		Field("model", e.Model, true).
+		Reason(&e.BaseError)
+
+	if len(e.SupportedModels) > 0 {
+		eb.b.WriteString(" (supported: ")
+		for i, m := range e.SupportedModels {
+			if i > 0 {
+				eb.b.WriteString(", ")
+			}
+			eb.b.WriteString(m)
+		}
+		eb.b.WriteString(")")
+	}
+
+	return eb.String()
+}
+
+// Type returns the error type for SDKError compliance.
+func (e *ModelError) Type() string { return "model" }
+
+// NewModelError creates a new ModelError.
+func NewModelError(model, reason string, supportedModels []string) *ModelError {
+	return &ModelError{
+		BaseError:       BaseError{Reason: reason},
+		Model:           model,
+		SupportedModels: supportedModels,
+	}
+}
+
 // Error creates an error message from a string.
 func Error(msg string) error {
 	return errors.New(msg)
@@ -483,6 +553,18 @@ func IsConfigurationError(err error) bool {
 // IsProcessError checks if an error is a ProcessError.
 func IsProcessError(err error) bool {
 	_, ok := err.(*ProcessError)
+	return ok
+}
+
+// IsPermissionError checks if an error is a PermissionError.
+func IsPermissionError(err error) bool {
+	_, ok := err.(*PermissionError)
+	return ok
+}
+
+// IsModelError checks if an error is a ModelError.
+func IsModelError(err error) bool {
+	_, ok := err.(*ModelError)
 	return ok
 }
 
@@ -552,6 +634,26 @@ func AsConfigurationError(err error) (*ConfigurationError, bool) {
 // Returns the error and true if found, nil and false otherwise.
 func AsProcessError(err error) (*ProcessError, bool) {
 	var target *ProcessError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsPermissionError extracts a PermissionError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsPermissionError(err error) (*PermissionError, bool) {
+	var target *PermissionError
+	if errors.As(err, &target) {
+		return target, true
+	}
+	return nil, false
+}
+
+// AsModelError extracts a ModelError from the error chain.
+// Returns the error and true if found, nil and false otherwise.
+func AsModelError(err error) (*ModelError, bool) {
+	var target *ModelError
 	if errors.As(err, &target) {
 		return target, true
 	}
