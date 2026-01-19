@@ -135,23 +135,17 @@ func (o *ClientOptions) toSharedOptions() *shared.Options {
 
 // WithModel sets the model option.
 func WithModel(model string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.Model = model
-	}
+	return func(o *ClientOptions) { shared.WithModelModel(model)(&o.ModelOptions) }
 }
 
 // WithCLIPath sets the CLI path option.
 func WithCLIPath(path string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.CLIPath = path
-	}
+	return func(o *ClientOptions) { shared.WithConnCLIPath(path)(&o.ConnectionOptions) }
 }
 
 // WithCLICommand sets the CLI command option.
 func WithCLICommand(command string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.CLICommand = command
-	}
+	return func(o *ClientOptions) { shared.WithConnCLICommand(command)(&o.ConnectionOptions) }
 }
 
 // WithPermissionMode sets the permission mode option.
@@ -161,9 +155,7 @@ func WithCLICommand(command string) func(*ClientOptions) {
 //
 //	client, _ := claude.NewClient(claude.WithPermissionMode("default"))
 func WithPermissionMode(mode string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.PermissionMode = mode
-	}
+	return func(o *ClientOptions) { shared.WithModelPermissionMode(mode)(&o.ModelOptions) }
 }
 
 // WithTypedPermissionMode sets the permission mode using typed constants.
@@ -175,105 +167,74 @@ func WithPermissionMode(mode string) func(*ClientOptions) {
 //	    claude.WithTypedPermissionMode(shared.PermissionModeAcceptEdits),
 //	)
 func WithTypedPermissionMode(mode shared.PermissionMode) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.PermissionMode = string(mode)
-	}
+	return func(o *ClientOptions) { shared.WithModelPermissionMode(string(mode))(&o.ModelOptions) }
 }
 
 // WithContextFiles sets the context files option.
 func WithContextFiles(files ...string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.ContextFiles = files
-	}
+	return func(o *ClientOptions) { shared.WithModelContextFiles(files...)(&o.ModelOptions) }
 }
 
 // WithIncludePartialMessages enables partial messages.
+// Note: This field is on ClientOptions directly, not on an embedded struct.
 func WithIncludePartialMessages(include bool) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.IncludePartialMessages = include
-	}
+	return func(o *ClientOptions) { o.IncludePartialMessages = include }
 }
 
 // WithEnableStructuredOutput enables structured output.
+// Note: This field is on ClientOptions directly, not on an embedded struct.
 func WithEnableStructuredOutput(enable bool) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.EnableStructuredOutput = enable
-	}
+	return func(o *ClientOptions) { o.EnableStructuredOutput = enable }
 }
 
 // WithTimeout sets the timeout option.
 func WithTimeout(timeout string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.Timeout = timeout
-	}
+	return func(o *ClientOptions) { shared.WithConnTimeout(timeout)(&o.ConnectionOptions) }
 }
 
 // WithCustomArgs sets custom arguments.
 func WithCustomArgs(args ...string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.CustomArgs = args
-	}
+	return func(o *ClientOptions) { shared.WithModelCustomArgs(args...)(&o.ModelOptions) }
 }
 
 // WithEnv sets environment variables.
 func WithEnv(env map[string]string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		if o.Env == nil {
-			o.Env = make(map[string]string)
-		}
-		for k, v := range env {
-			o.Env[k] = v
-		}
-	}
+	return func(o *ClientOptions) { shared.WithConnEnv(env)(&o.ConnectionOptions) }
 }
 
 // WithMaxMessages sets the maximum number of messages.
 func WithMaxMessages(max int) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.MaxMessages = max
-	}
+	return func(o *ClientOptions) { shared.WithBufMaxMessages(max)(&o.BufferOptions) }
 }
 
 // WithBufferSize sets the buffer size for message channels.
 func WithBufferSize(size int) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.BufferSize = size
-	}
+	return func(o *ClientOptions) { shared.WithBufBufferSize(size)(&o.BufferOptions) }
 }
 
 // WithTrace enables detailed tracing.
 func WithTrace(trace bool) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.Trace = trace
-	}
+	return func(o *ClientOptions) { shared.WithDebugTrace(trace)(&o.DebugOptions) }
 }
 
 // WithDisableCache disables caching.
 func WithDisableCache(disable bool) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.DisableCache = disable
-	}
+	return func(o *ClientOptions) { shared.WithDebugDisableCache(disable)(&o.DebugOptions) }
 }
 
 // WithCacheTTL sets cache expiration time.
 func WithCacheTTL(ttl string) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.CacheTTL = ttl
-	}
+	return func(o *ClientOptions) { shared.WithDebugCacheTTL(ttl)(&o.DebugOptions) }
 }
 
 // WithLogger sets the logger interface.
 func WithLogger(logger shared.Logger) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.Logger = logger
-	}
+	return func(o *ClientOptions) { shared.WithDebugLogger(logger)(&o.DebugOptions) }
 }
 
 // WithEnableMetrics enables performance metrics.
 func WithEnableMetrics(enable bool) func(*ClientOptions) {
-	return func(o *ClientOptions) {
-		o.EnableMetrics = enable
-	}
+	return func(o *ClientOptions) { shared.WithDebugEnableMetrics(enable)(&o.DebugOptions) }
 }
 
 // Focused option group setters for composition

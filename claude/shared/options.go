@@ -94,13 +94,8 @@ func (o *Options) Validate() error {
 		return NewConfigurationError("Model", "", "model is required")
 	}
 
-	// Resolve short model names before validation
+	// Resolve short model names (claude aliases only)
 	o.Model = ResolveModelName(o.Model)
-
-	// Validate model name format
-	if !strings.HasPrefix(o.Model, "claude-") {
-		return NewConfigurationError("Model", o.Model, "model must start with 'claude-'")
-	}
 
 	// Validate permission mode
 	validModes := []string{"auto", "read", "write", "restricted"}
@@ -341,6 +336,104 @@ func DefaultDebugOptions() DebugOptions {
 	}
 }
 
+// =============================================================================
+// Focused Struct Option Functions
+// These operate on the focused option structs (ConnectionOptions, BufferOptions,
+// ModelOptions, DebugOptions) for use by packages that embed these structs.
+// =============================================================================
+
+// ConnectionOptionFunc is a function that configures ConnectionOptions.
+type ConnectionOptionFunc func(*ConnectionOptions)
+
+// WithConnCLIPath sets CLIPath on ConnectionOptions.
+func WithConnCLIPath(path string) ConnectionOptionFunc {
+	return func(o *ConnectionOptions) { o.CLIPath = path }
+}
+
+// WithConnCLICommand sets CLICommand on ConnectionOptions.
+func WithConnCLICommand(command string) ConnectionOptionFunc {
+	return func(o *ConnectionOptions) { o.CLICommand = command }
+}
+
+// WithConnTimeout sets Timeout on ConnectionOptions.
+func WithConnTimeout(timeout string) ConnectionOptionFunc {
+	return func(o *ConnectionOptions) { o.Timeout = timeout }
+}
+
+// WithConnEnv sets Env on ConnectionOptions (merges with existing).
+func WithConnEnv(env map[string]string) ConnectionOptionFunc {
+	return func(o *ConnectionOptions) {
+		if o.Env == nil {
+			o.Env = make(map[string]string)
+		}
+		maps.Copy(o.Env, env)
+	}
+}
+
+// BufferOptionFunc is a function that configures BufferOptions.
+type BufferOptionFunc func(*BufferOptions)
+
+// WithBufBufferSize sets BufferSize on BufferOptions.
+func WithBufBufferSize(size int) BufferOptionFunc {
+	return func(o *BufferOptions) { o.BufferSize = size }
+}
+
+// WithBufMaxMessages sets MaxMessages on BufferOptions.
+func WithBufMaxMessages(max int) BufferOptionFunc {
+	return func(o *BufferOptions) { o.MaxMessages = max }
+}
+
+// ModelOptionFunc is a function that configures ModelOptions.
+type ModelOptionFunc func(*ModelOptions)
+
+// WithModelModel sets Model on ModelOptions.
+func WithModelModel(model string) ModelOptionFunc {
+	return func(o *ModelOptions) { o.Model = model }
+}
+
+// WithModelPermissionMode sets PermissionMode on ModelOptions.
+func WithModelPermissionMode(mode string) ModelOptionFunc {
+	return func(o *ModelOptions) { o.PermissionMode = mode }
+}
+
+// WithModelContextFiles sets ContextFiles on ModelOptions.
+func WithModelContextFiles(files ...string) ModelOptionFunc {
+	return func(o *ModelOptions) { o.ContextFiles = files }
+}
+
+// WithModelCustomArgs sets CustomArgs on ModelOptions.
+func WithModelCustomArgs(args ...string) ModelOptionFunc {
+	return func(o *ModelOptions) { o.CustomArgs = args }
+}
+
+// DebugOptionFunc is a function that configures DebugOptions.
+type DebugOptionFunc func(*DebugOptions)
+
+// WithDebugTrace sets Trace on DebugOptions.
+func WithDebugTrace(trace bool) DebugOptionFunc {
+	return func(o *DebugOptions) { o.Trace = trace }
+}
+
+// WithDebugDisableCache sets DisableCache on DebugOptions.
+func WithDebugDisableCache(disable bool) DebugOptionFunc {
+	return func(o *DebugOptions) { o.DisableCache = disable }
+}
+
+// WithDebugCacheTTL sets CacheTTL on DebugOptions.
+func WithDebugCacheTTL(ttl string) DebugOptionFunc {
+	return func(o *DebugOptions) { o.CacheTTL = ttl }
+}
+
+// WithDebugLogger sets Logger on DebugOptions.
+func WithDebugLogger(logger Logger) DebugOptionFunc {
+	return func(o *DebugOptions) { o.Logger = logger }
+}
+
+// WithDebugEnableMetrics sets EnableMetrics on DebugOptions.
+func WithDebugEnableMetrics(enable bool) DebugOptionFunc {
+	return func(o *DebugOptions) { o.EnableMetrics = enable }
+}
+
 // OutputFormat represents structured output configuration.
 type OutputFormat struct {
 	Type   string         `json:"type"` // "json_schema"
@@ -565,6 +658,69 @@ func DefaultBaseOptions() BaseOptions {
 
 // BaseOptionFunc is a function that configures BaseOptions.
 type BaseOptionFunc func(*BaseOptions)
+
+// WithBaseModel sets Model on BaseOptions.
+func WithBaseModel(model string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.Model = model
+	}
+}
+
+// WithBaseSystemPrompt sets SystemPrompt on BaseOptions.
+func WithBaseSystemPrompt(prompt string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.SystemPrompt = prompt
+	}
+}
+
+// WithBaseAppendSystemPrompt sets AppendSystemPrompt on BaseOptions.
+func WithBaseAppendSystemPrompt(prompt string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.AppendSystemPrompt = prompt
+	}
+}
+
+// WithBaseAllowedTools sets AllowedTools on BaseOptions.
+func WithBaseAllowedTools(tools ...string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.AllowedTools = tools
+	}
+}
+
+// WithBasePermissionMode sets PermissionMode on BaseOptions.
+func WithBasePermissionMode(mode string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.PermissionMode = mode
+	}
+}
+
+// WithBaseContextFiles sets ContextFiles on BaseOptions.
+func WithBaseContextFiles(files ...string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.ContextFiles = append(o.ContextFiles, files...)
+	}
+}
+
+// WithBaseCustomArgs sets CustomArgs on BaseOptions.
+func WithBaseCustomArgs(args ...string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.CustomArgs = args
+	}
+}
+
+// WithBaseEnv sets Env on BaseOptions.
+func WithBaseEnv(env map[string]string) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.Env = env
+	}
+}
+
+// WithBaseDebugWriter sets DebugWriter on BaseOptions.
+func WithBaseDebugWriter(w io.Writer) BaseOptionFunc {
+	return func(o *BaseOptions) {
+		o.DebugWriter = w
+	}
+}
 
 // WithBaseContinue sets Continue on BaseOptions.
 func WithBaseContinue(cont bool) BaseOptionFunc {
