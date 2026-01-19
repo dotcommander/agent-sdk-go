@@ -186,10 +186,10 @@ transport, err := subprocess.NewTransport(config)
 Configure Model Context Protocol servers:
 
 ```go
-import "github.com/dotcommander/agent-sdk-go/claude/shared"
+import "github.com/dotcommander/agent-sdk-go/claude"
 
 config := &subprocess.TransportConfig{
-    McpServers: map[string]shared.McpServerConfig{
+    McpServers: map[string]claude.McpServerConfig{
         "filesystem": {
             Command: "mcp-server-filesystem",
             Args:    []string{"/home/user/projects"},
@@ -208,13 +208,13 @@ config := &subprocess.TransportConfig{
 
 ```go
 // Stdio server
-shared.McpServerConfig{
+claude.McpServerConfig{
     Command: "mcp-server",
     Args:    []string{"--port", "8080"},
 }
 
 // SSE server
-shared.McpServerConfig{
+claude.McpServerConfig{
     URL: "http://localhost:8080/sse",
 }
 ```

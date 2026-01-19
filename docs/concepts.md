@@ -27,7 +27,7 @@ Understanding how the SDK works will help you build more effective agents.
 | Client | `claude` | High-level API for queries and sessions |
 | Transport | `claude/subprocess` | Manages CLI subprocess communication |
 | Parser | `claude/parser` | Parses JSON messages from CLI |
-| Shared | `claude/shared` | Common types and utilities |
+| Shared | `claude` | Common types and utilities (re-exported via `claude` package) |
 
 ## Message Flow
 
@@ -134,18 +134,18 @@ type ToolResultBlock struct {
 Use helper functions to extract content from messages:
 
 ```go
-import "github.com/dotcommander/agent-sdk-go/claude/shared"
+import "github.com/dotcommander/agent-sdk-go/claude"
 
 // Get text content from any message
-text := shared.GetContentText(msg)
+text := claude.GetContentText(msg)
 
 // Check message type
 switch m := msg.(type) {
-case *shared.AssistantMessage:
+case *claude.AssistantMessage:
     for _, block := range m.Content {
         // Process each content block
     }
-case *shared.ResultMessage:
+case *claude.ResultMessage:
     // Handle completion
 }
 ```

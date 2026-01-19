@@ -40,7 +40,6 @@ import (
     "os"
 
     "github.com/dotcommander/agent-sdk-go/claude"
-    "github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 func main() {
@@ -76,7 +75,7 @@ func main() {
                     fmt.Println()
                     goto nextTurn
                 }
-                fmt.Print(shared.GetContentText(msg))
+                fmt.Print(claude.GetContentText(msg))
             case err := <-errChan:
                 if err != nil {
                     log.Printf("Error: %v\n", err)

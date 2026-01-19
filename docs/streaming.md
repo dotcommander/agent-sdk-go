@@ -23,7 +23,7 @@ for {
         if !ok {
             return // Stream complete
         }
-        if text := shared.GetContentText(msg); text != "" {
+        if text := claude.GetContentText(msg); text != "" {
             fmt.Print(text) // Print as it arrives
         }
     case err := <-errChan:
@@ -52,30 +52,30 @@ for {
 ## Handling Different Message Types
 
 ```go
-import "github.com/dotcommander/agent-sdk-go/claude/shared"
+import "github.com/dotcommander/agent-sdk-go/claude"
 
 msgChan, errChan := client.QueryStream(ctx, prompt)
 
 for msg := range msgChan {
     switch m := msg.(type) {
-    case *shared.AssistantMessage:
+    case *claude.AssistantMessage:
         // Main content - may arrive in chunks
         for _, block := range m.Content {
-            if tb, ok := block.(*shared.TextBlock); ok {
+            if tb, ok := block.(*claude.TextBlock); ok {
                 fmt.Print(tb.Text)
             }
         }
 
-    case *shared.ToolUseMessage:
+    case *claude.ToolUseMessage:
         // Claude wants to use a tool
         fmt.Printf("Tool: %s\n", m.Name)
         fmt.Printf("Input: %v\n", m.Input)
 
-    case *shared.ResultMessage:
+    case *claude.ResultMessage:
         // Response complete
         fmt.Printf("\nTokens used: %d\n", m.Usage.TotalTokens)
 
-    case *shared.ErrorMessage:
+    case *claude.ErrorMessage:
         // Error during generation
         log.Printf("Error: %s\n", m.Error)
     }
@@ -103,7 +103,7 @@ func streamAndCollect(client claude.Client, ctx context.Context, prompt string) 
             if !ok {
                 return builder.String(), nil
             }
-            if text := shared.GetContentText(msg); text != "" {
+            if text := claude.GetContentText(msg); text != "" {
                 fmt.Print(text)        // Stream to console
                 builder.WriteString(text) // Collect
             }
@@ -134,7 +134,7 @@ for {
         if !ok {
             return
         }
-        fmt.Print(shared.GetContentText(msg))
+        fmt.Print(claude.GetContentText(msg))
     case err := <-errChan:
         if errors.Is(err, context.Canceled) {
             fmt.Println("\n[Cancelled]")
@@ -198,7 +198,7 @@ func streamWithProgress(client claude.Client, ctx context.Context, prompt string
                 fmt.Println()
                 return
             }
-            if text := shared.GetContentText(msg); text != "" {
+            if text := claude.GetContentText(msg); text != "" {
                 if !started {
                     fmt.Print("\r\033[K") // Clear spinner
                     started = true
@@ -247,7 +247,7 @@ func streamBuffered(client claude.Client, ctx context.Context, prompt string) {
                 flush()
                 return
             }
-            if text := shared.GetContentText(msg); text != "" {
+            if text := claude.GetContentText(msg); text != "" {
                 buffer = append(buffer, text)
             }
         case err := <-errChan:
@@ -290,7 +290,7 @@ func parallelQueries(client claude.Client, ctx context.Context, prompts []string
                         mu.Unlock()
                         return
                     }
-                    builder.WriteString(shared.GetContentText(msg))
+                    builder.WriteString(claude.GetContentText(msg))
                 case err := <-errChan:
                     if err != nil {
                         mu.Lock()

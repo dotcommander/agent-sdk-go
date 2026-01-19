@@ -99,7 +99,6 @@ import (
     "log"
 
     "github.com/dotcommander/agent-sdk-go/claude"
-    "github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 func main() {
@@ -119,7 +118,7 @@ func main() {
                 return
             }
             // Extract and print text content
-            if text := shared.GetContentText(msg); text != "" {
+            if text := claude.GetContentText(msg); text != "" {
                 fmt.Print(text)
             }
         case err := <-errChan:

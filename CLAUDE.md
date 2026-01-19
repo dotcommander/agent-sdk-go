@@ -41,7 +41,7 @@ go test -tags=integration ./...
 | claude/parser | 83% |
 | claude/cli | 56% |
 | claude/subprocess | 44% |
-| claude/shared | 26% |
+| internal/shared | 26% |
 | claude/v2 | 5% (integration tests excluded) |
 
 ### Single Test Execution
@@ -65,20 +65,22 @@ agent-sdk-go/
 │   ├── client.go           # High-level Client interface
 │   ├── types.go            # Message types, interfaces
 │   ├── options.go          # Client configuration options
-│   ├── shared/             # Shared types, options, factory
-│   │   ├── agents.go       # Agent definitions
-│   │   ├── hooks.go        # Hook system (12 event types)
-│   │   ├── mcp.go          # MCP server configurations
-│   │   ├── message.go      # Message types
-│   │   ├── options.go      # Base options (25+ fields)
-│   │   ├── permissions.go  # Permission system
-│   │   ├── sandbox.go      # Sandbox settings
-│   │   └── tools/          # Tool input schemas
+│   ├── exports.go          # Re-exports from internal/shared
 │   ├── cli/                # CLI discovery and availability
 │   ├── parser/             # JSON message parsing
 │   ├── subprocess/         # Process management, transport
 │   ├── mcp/                # MCP server support
 │   └── v2/                 # V2 session/prompt API
+├── internal/               # Internal packages (not imported by users)
+│   └── shared/             # Shared types, options, factory (private)
+│       ├── agents.go       # Agent definitions
+│       ├── hooks.go        # Hook system (12 event types)
+│       ├── mcp.go          # MCP server configurations
+│       ├── message.go      # Message types
+│       ├── options.go      # Base options (25+ fields)
+│       ├── permissions.go  # Permission system
+│       ├── sandbox.go      # Sandbox settings
+│       └── tools/          # Tool input schemas
 ├── examples/               # Usage examples
 └── docs/                   # Documentation
 ```
@@ -93,9 +95,9 @@ agent-sdk-go/
 ## Common Development Tasks
 
 ### Extending the SDK
-1. Add types to `claude/shared/types.go`
-2. Implement functionality in appropriate `claude/*` package
-3. Export new types/functions via `claude/exports.go` if needed
+1. Add types to `internal/shared/types.go`
+2. Implement functionality in appropriate `claude/*` or `internal/shared/*` package
+3. Re-export public types/functions via `claude/exports.go` if user-facing
 4. Add corresponding tests in `*_test.go` files
 5. Maintain test coverage (target 80%+)
 

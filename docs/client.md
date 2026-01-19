@@ -120,12 +120,12 @@ for {
 ### Extracting Text
 
 ```go
-import "github.com/dotcommander/agent-sdk-go/claude/shared"
+import "github.com/dotcommander/agent-sdk-go/claude"
 
 msgChan, errChan := client.QueryStream(ctx, prompt)
 
 for msg := range msgChan {
-    text := shared.GetContentText(msg)
+    text := claude.GetContentText(msg)
     if text != "" {
         fmt.Print(text)
     }
@@ -137,11 +137,11 @@ for msg := range msgChan {
 ```go
 for msg := range msgChan {
     switch m := msg.(type) {
-    case *shared.AssistantMessage:
+    case *claude.AssistantMessage:
         fmt.Println("Assistant:", m.Content)
-    case *shared.ResultMessage:
+    case *claude.ResultMessage:
         fmt.Println("Done! Cost:", m.Usage)
-    case *shared.ErrorMessage:
+    case *claude.ErrorMessage:
         fmt.Println("Error:", m.Error)
     }
 }
@@ -269,7 +269,6 @@ import (
     "time"
 
     "github.com/dotcommander/agent-sdk-go/claude"
-    "github.com/dotcommander/agent-sdk-go/claude/shared"
 )
 
 func main() {
@@ -297,7 +296,7 @@ func main() {
                 fmt.Println("\nDone!")
                 return
             }
-            if text := shared.GetContentText(msg); text != "" {
+            if text := claude.GetContentText(msg); text != "" {
                 fmt.Print(text)
             }
         case err := <-errChan:
