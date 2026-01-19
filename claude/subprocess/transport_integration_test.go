@@ -2,6 +2,7 @@ package subprocess
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -38,14 +39,7 @@ func TestTransportEnvironmentValidation(t *testing.T) {
 
 	// Should include all valid environment variables
 	for k, v := range validEnv {
-		found := false
-		for _, envVar := range env {
-			if envVar == k+"="+v {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(env, k+"="+v) {
 			t.Errorf("Valid environment variable %s=%s not found", k, v)
 		}
 	}
@@ -64,32 +58,32 @@ func TestTransportEnvironmentValidation(t *testing.T) {
 
 	// Should NOT include any invalid environment variables
 	for k, v := range invalidEnv {
-		for _, envVar := range env2 {
-			if envVar == k+"="+v {
-				t.Errorf("Invalid environment variable %s=%s was included", k, v)
-				break
-			}
+		if slices.Contains(env2, k+"="+v) {
+			t.Errorf("Invalid environment variable %s=%s was included", k, v)
 		}
 	}
 }
 
 func TestTransportPromptValidation(t *testing.T) {
+	// Shell metacharacters are safe because exec.Command doesn't invoke a shell.
+	// Only null bytes are rejected as they could cause truncation issues.
 	validPrompts := []string{
 		"Hello world",
 		"What is the capital of France?",
 		"Explain quantum computing in simple terms",
 		"Calculate 2 + 2",
+		"Hello `world",  // backtick - safe with exec.Command
+		"Hello $world",  // dollar sign - safe with exec.Command
+		"Hello $!world", // bang - safe with exec.Command
+		"Hello &world",  // ampersand - safe with exec.Command
+		"Hello ;world",  // semicolon - safe with exec.Command
+		"Hello |world",  // pipe - safe with exec.Command
+		"Hello <world",  // less than - safe with exec.Command
+		"Hello >world",  // greater than - safe with exec.Command
 	}
 
 	invalidPrompts := []string{
-		"Hello `world", // backtick
-		"Hello $world", // dollar sign
-		"Hello $!world", // bang
-		"Hello &world", // ampersand
-		"Hello ;world", // semicolon
-		"Hello |world", // pipe
-		"Hello <world", // less than
-		"Hello >world", // greater than
+		"Hello\x00world", // null byte - dangerous, could truncate
 	}
 
 	// Test valid prompts
