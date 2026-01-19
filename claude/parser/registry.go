@@ -92,12 +92,18 @@ func (r *MessageParserRegistry) registerDefaults() {
 
 // Default parser functions
 
-func parseUserMessage(jsonStr string, lineNumber int) (shared.Message, error) {
-	var msg shared.UserMessage
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
-		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse UserMessage: %v", err))
+// parseMessage is a generic parser for message types that follow the simple unmarshal pattern.
+// T must be a pointer type that implements shared.Message.
+func parseMessage[T shared.Message](jsonStr string, lineNumber int, typeName string) (shared.Message, error) {
+	msg := new(T)
+	if err := json.Unmarshal([]byte(jsonStr), msg); err != nil {
+		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse %s: %v", typeName, err))
 	}
-	return &msg, nil
+	return *msg, nil
+}
+
+func parseUserMessage(jsonStr string, lineNumber int) (shared.Message, error) {
+	return parseMessage[*shared.UserMessage](jsonStr, lineNumber, "UserMessage")
 }
 
 func parseAssistantMessage(jsonStr string, lineNumber int) (shared.Message, error) {
@@ -204,19 +210,11 @@ func parseSystemMessage(jsonStr string, lineNumber int) (shared.Message, error) 
 }
 
 func parseResultMessage(jsonStr string, lineNumber int) (shared.Message, error) {
-	var msg shared.ResultMessage
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
-		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse ResultMessage: %v", err))
-	}
-	return &msg, nil
+	return parseMessage[*shared.ResultMessage](jsonStr, lineNumber, "ResultMessage")
 }
 
 func parseStreamEvent(jsonStr string, lineNumber int) (shared.Message, error) {
-	var msg shared.StreamEvent
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
-		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse StreamEvent: %v", err))
-	}
-	return &msg, nil
+	return parseMessage[*shared.StreamEvent](jsonStr, lineNumber, "StreamEvent")
 }
 
 func parseControlRequest(jsonStr string, lineNumber int) (shared.Message, error) {
@@ -236,19 +234,11 @@ func parseControlResponse(jsonStr string, lineNumber int) (shared.Message, error
 }
 
 func parseToolProgressMessage(jsonStr string, lineNumber int) (shared.Message, error) {
-	var msg shared.ToolProgressMessage
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
-		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse ToolProgressMessage: %v", err))
-	}
-	return &msg, nil
+	return parseMessage[*shared.ToolProgressMessage](jsonStr, lineNumber, "ToolProgressMessage")
 }
 
 func parseAuthStatusMessage(jsonStr string, lineNumber int) (shared.Message, error) {
-	var msg shared.AuthStatusMessage
-	if err := json.Unmarshal([]byte(jsonStr), &msg); err != nil {
-		return nil, shared.NewParserError(lineNumber, 0, jsonStr, fmt.Sprintf("failed to parse AuthStatusMessage: %v", err))
-	}
-	return &msg, nil
+	return parseMessage[*shared.AuthStatusMessage](jsonStr, lineNumber, "AuthStatusMessage")
 }
 
 // defaultRegistry is the global default registry instance.
