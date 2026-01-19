@@ -1,0 +1,42 @@
+# Test files
+*_test.go
+*_integration_test.go
+*_bench_test.go
+testdata/
+
+# Coverage and profiling
+*.out
+coverage.*
+*.prof
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Archives
+docs/archive/
+specs/archive/
+
+# Examples (optional - comment out if needed)
+# examples/
+
+# Vendor (if present)
+vendor/
