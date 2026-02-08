@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -24,6 +25,10 @@ import (
 	"github.com/dotcommander/agent-sdk-go/claude/parser"
 	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
+
+// debugEnabled gates debug logging to /tmp/sdk-debug.log.
+// Set CLAUDE_SDK_DEBUG=1 to enable.
+var debugEnabled = os.Getenv("CLAUDE_SDK_DEBUG") != ""
 
 const (
 	// defaultTimeout is the default timeout for subprocess operations.
@@ -114,7 +119,7 @@ func calculateDelay(attempt int) time.Duration {
 
 	// Add jitter (random factor between 0.5x and 1.5x)
 	jitter := 0.5 + rand.Float64()*1.0
-	delay = delay * jitter
+	delay *= jitter
 
 	// Cap at 5 seconds to avoid excessive delays
 	cappedDelay := time.Duration(delay)
@@ -354,15 +359,17 @@ func (t *Transport) Connect(ctx context.Context) error {
 		t.cmd.Env = t.buildEnv()
 
 		// Debug: log command and relevant env vars to file
-		if debugFile, err := os.OpenFile("/tmp/sdk-debug.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
-			fmt.Fprintf(debugFile, "\n=== %s ===\n", time.Now().Format(time.RFC3339))
-			fmt.Fprintf(debugFile, "command: %s %v\n", cliPath, args)
-			for _, e := range t.cmd.Env {
-				if strings.HasPrefix(e, "ANTHROPIC_") || strings.HasPrefix(e, "SYNTHETIC_") || strings.HasPrefix(e, "ZAI_") {
-					fmt.Fprintf(debugFile, "env: %s\n", e)
+		if debugEnabled {
+			if debugFile, err := os.OpenFile("/tmp/sdk-debug.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+				fmt.Fprintf(debugFile, "\n=== %s ===\n", time.Now().Format(time.RFC3339))
+				fmt.Fprintf(debugFile, "command: %s %v\n", cliPath, args)
+				for _, e := range t.cmd.Env {
+					if strings.HasPrefix(e, "ANTHROPIC_") || strings.HasPrefix(e, "SYNTHETIC_") || strings.HasPrefix(e, "ZAI_") {
+						fmt.Fprintf(debugFile, "env: %s\n", e)
+					}
 				}
+				debugFile.Close()
 			}
-			debugFile.Close()
 		}
 
 		// Set up I/O pipes
@@ -439,10 +446,11 @@ func (t *Transport) buildEnv() []string {
 	env := os.Environ()
 
 	// Add custom environment variables with validation
-	// Invalid environment variables are silently skipped for security
 	for k, v := range t.env {
 		if isValidEnvVar(k, v) {
 			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		} else if debugEnabled {
+			log.Printf("claude-sdk: skipping invalid env var %q", k)
 		}
 	}
 
@@ -483,9 +491,11 @@ func (t *Transport) handleStdout() {
 		}
 
 		// Debug: log raw response line to file
-		if debugFile, err := os.OpenFile("/tmp/sdk-debug.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
-			fmt.Fprintf(debugFile, "response: %s\n", line)
-			debugFile.Close()
+		if debugEnabled {
+			if debugFile, err := os.OpenFile("/tmp/sdk-debug.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+				fmt.Fprintf(debugFile, "response: %s\n", line)
+				debugFile.Close()
+			}
 		}
 
 		// Parse the line as JSON
@@ -818,10 +828,17 @@ func (t *Transport) needsProtocolHandshake() bool {
 		return false
 	}
 
-	return t.enableControlProtocol ||
+	needed := t.enableControlProtocol ||
 		t.canUseTool != nil ||
 		len(t.protocolHooks) > 0 ||
 		t.enableCheckpointing
+
+	if needed && debugEnabled {
+		log.Printf("claude-sdk: control protocol enabled (explicit=%v, canUseTool=%v, hooks=%d, checkpointing=%v)",
+			t.enableControlProtocol, t.canUseTool != nil, len(t.protocolHooks), t.enableCheckpointing)
+	}
+
+	return needed
 }
 
 // setupControlProtocol creates and initializes the control protocol.

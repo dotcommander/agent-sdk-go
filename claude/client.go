@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dotcommander/agent-sdk-go/internal/shared"
 	"github.com/dotcommander/agent-sdk-go/claude/subprocess"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // ClientImpl implements the Client interface using subprocess transport.
@@ -178,6 +178,8 @@ func (c *ClientImpl) QueryWithSession(ctx context.Context, sessionID string, pro
 }
 
 // QueryStream sends a one-shot query and streams the response.
+// Each call creates a new subprocess for isolation. For repeated queries
+// to the same session, use Session.SendMessage() instead which reuses the connection.
 func (c *ClientImpl) QueryStream(ctx context.Context, prompt string) (<-chan Message, <-chan error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

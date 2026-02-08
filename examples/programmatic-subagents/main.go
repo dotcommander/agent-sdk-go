@@ -110,10 +110,10 @@ func demonstrateToolRestrictions() {
 
 	fmt.Println("1. Read-only agent:")
 	readOnlyAgent := claude.AgentDefinition{
-		Description:     "Can only read files, not modify",
-		Prompt:          "Analyze code without making changes.",
-		Tools:           []string{"Read", "Glob", "Grep", "LSP"},
-		Model:           claude.AgentModelSonnet,
+		Description: "Can only read files, not modify",
+		Prompt:      "Analyze code without making changes.",
+		Tools:       []string{"Read", "Glob", "Grep", "LSP"},
+		Model:       claude.AgentModelSonnet,
 	}
 	printJSON("Read-Only Agent", readOnlyAgent)
 

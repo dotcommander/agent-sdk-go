@@ -36,7 +36,7 @@ func TestNewTransportWithDefaults(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, transport)
 	assert.Equal(t, "claude-sonnet-4-5-20250929", transport.model) // Default model
-	assert.Equal(t, defaultTimeout, transport.timeout)          // Default timeout
+	assert.Equal(t, defaultTimeout, transport.timeout)             // Default timeout
 }
 
 // TestNewTransportWithPrompt tests creating a transport for one-shot mode.

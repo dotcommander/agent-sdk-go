@@ -19,10 +19,10 @@ func TestTransportEnvironmentValidation(t *testing.T) {
 
 	// Test invalid environment variables
 	invalidEnv := map[string]string{
-		"valid_var":     "value",           // lowercase key
+		"valid_var":     "value",                 // lowercase key
 		"INVALID_VAR":   "value\nwith\nnewlines", // newlines in value
-		"INVALID_VAR2":  "value\000null",   // null byte in value
-		"3_INVALID_VAR": "value",          // starts with number
+		"INVALID_VAR2":  "value\000null",         // null byte in value
+		"3_INVALID_VAR": "value",                 // starts with number
 	}
 
 	// Test buildEnv with valid environment variables

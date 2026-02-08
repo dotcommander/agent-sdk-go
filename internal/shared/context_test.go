@@ -12,10 +12,10 @@ func TestGetValue(t *testing.T) {
 	const testKey ContextKey = "test_key"
 
 	tests := []struct {
-		name     string
-		setup    func() context.Context
-		wantVal  string
-		wantOK   bool
+		name    string
+		setup   func() context.Context
+		wantVal string
+		wantOK  bool
 	}{
 		{
 			name: "value exists",
@@ -27,9 +27,7 @@ func TestGetValue(t *testing.T) {
 		},
 		{
 			name: "value missing",
-			setup: func() context.Context {
-				return context.Background()
-			},
+			setup: context.Background,
 			wantVal: "",
 			wantOK:  false,
 		},

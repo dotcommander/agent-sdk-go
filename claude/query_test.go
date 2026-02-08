@@ -22,12 +22,12 @@ func TestQueryIteratorNext(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		messages   []shared.Message
-		errs       []error
-		wantMsgs   int
-		wantErr    error
-		wantFinal  error
+		name      string
+		messages  []shared.Message
+		errs      []error
+		wantMsgs  int
+		wantErr   error
+		wantFinal error
 	}{
 		{
 			name: "single message",
@@ -53,10 +53,10 @@ func TestQueryIteratorNext(t *testing.T) {
 			wantFinal: ErrNoMoreMessages,
 		},
 		{
-			name:       "empty stream",
-			messages:   []shared.Message{},
-			wantMsgs:   0,
-			wantFinal:  ErrNoMoreMessages,
+			name:      "empty stream",
+			messages:  []shared.Message{},
+			wantMsgs:  0,
+			wantFinal: ErrNoMoreMessages,
 		},
 		{
 			name:     "error in stream",

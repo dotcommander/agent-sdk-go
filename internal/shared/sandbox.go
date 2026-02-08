@@ -19,12 +19,12 @@ type RipgrepConfig struct {
 // SandboxConfig provides comprehensive sandbox configuration.
 // This extends the basic SandboxSettings with additional isolation options.
 type SandboxConfig struct {
-	Enabled                   bool                `json:"enabled,omitempty"`
-	AutoAllowBashIfSandboxed  bool                `json:"autoAllowBashIfSandboxed,omitempty"`
-	AllowUnsandboxedCommands  bool                `json:"allowUnsandboxedCommands,omitempty"`
+	Enabled                   bool                  `json:"enabled,omitempty"`
+	AutoAllowBashIfSandboxed  bool                  `json:"autoAllowBashIfSandboxed,omitempty"`
+	AllowUnsandboxedCommands  bool                  `json:"allowUnsandboxedCommands,omitempty"`
 	Network                   *SandboxNetworkConfig `json:"network,omitempty"`
-	IgnoreViolations          map[string][]string `json:"ignoreViolations,omitempty"`
-	EnableWeakerNestedSandbox bool                `json:"enableWeakerNestedSandbox,omitempty"`
-	ExcludedCommands          []string            `json:"excludedCommands,omitempty"`
-	Ripgrep                   *RipgrepConfig      `json:"ripgrep,omitempty"`
+	IgnoreViolations          map[string][]string   `json:"ignoreViolations,omitempty"`
+	EnableWeakerNestedSandbox bool                  `json:"enableWeakerNestedSandbox,omitempty"`
+	ExcludedCommands          []string              `json:"excludedCommands,omitempty"`
+	Ripgrep                   *RipgrepConfig        `json:"ripgrep,omitempty"`
 }

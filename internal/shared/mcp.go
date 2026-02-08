@@ -39,9 +39,9 @@ func (McpHttpServerConfig) mcpServerConfig() {}
 
 // McpSdkServerConfig configures an in-process MCP server.
 type McpSdkServerConfig struct {
-	Type     string      `json:"type"` // "sdk"
-	Name     string      `json:"name"`
-	Instance any `json:"-"` // MCP Server instance (not serialized)
+	Type     string `json:"type"` // "sdk"
+	Name     string `json:"name"`
+	Instance any    `json:"-"` // MCP Server instance (not serialized)
 }
 
 func (McpSdkServerConfig) mcpServerConfig() {}

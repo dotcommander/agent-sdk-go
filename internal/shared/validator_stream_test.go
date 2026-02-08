@@ -26,15 +26,15 @@ func TestNewStreamValidator(t *testing.T) {
 
 func TestStreamValidatorTrackMessage(t *testing.T) {
 	tests := []struct {
-		name            string
-		messages        []Message
-		wantTotal       int
-		wantPartial     int
-		wantErrors      int
-		wantToolReq     int
-		wantToolResp    int
-		wantPending     int
-		wantIssueCount  int
+		name           string
+		messages       []Message
+		wantTotal      int
+		wantPartial    int
+		wantErrors     int
+		wantToolReq    int
+		wantToolResp   int
+		wantPending    int
+		wantIssueCount int
 	}{
 		{
 			name:           "nil message",
@@ -243,13 +243,13 @@ func TestStreamValidatorReset(t *testing.T) {
 
 func TestStreamValidatorIsComplete(t *testing.T) {
 	tests := []struct {
-		name        string
-		setup       func(*StreamValidator)
+		name         string
+		setup        func(*StreamValidator)
 		wantComplete bool
 	}{
 		{
-			name:        "not ended",
-			setup:       func(v *StreamValidator) {},
+			name:         "not ended",
+			setup:        func(v *StreamValidator) {},
 			wantComplete: false,
 		},
 		{

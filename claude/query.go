@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/dotcommander/agent-sdk-go/internal/shared"
 	"github.com/dotcommander/agent-sdk-go/claude/subprocess"
+	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // ErrNoMoreMessages is returned by MessageIterator.Next when there are no more messages.

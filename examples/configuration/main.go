@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/dotcommander/agent-sdk-go/claude/cli"
 	"github.com/dotcommander/agent-sdk-go/claude"
+	"github.com/dotcommander/agent-sdk-go/claude/cli"
 	"github.com/dotcommander/agent-sdk-go/claude/v2"
 )
 

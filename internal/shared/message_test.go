@@ -124,9 +124,9 @@ func TestSystemMessage(t *testing.T) {
 
 func TestResultMessage(t *testing.T) {
 	resultMsg := &ResultMessage{
-		Subtype:     "final_result",
-		DurationMs:  1500,
-		NumTurns:    2,
+		Subtype:    "final_result",
+		DurationMs: 1500,
+		NumTurns:   2,
 		SessionID:  "session-123",
 	}
 
@@ -237,7 +237,7 @@ func TestToolUseBlock(t *testing.T) {
 func TestToolResultBlock(t *testing.T) {
 	toolResultBlock := &ToolResultBlock{
 		ToolUseID: "tool-use-123",
-		Content:    "4",
+		Content:   "4",
 	}
 
 	// Test BlockType() method
@@ -372,11 +372,11 @@ func BenchmarkMessageMarshaling(b *testing.B) {
 
 func TestExtractBlocks(t *testing.T) {
 	tests := []struct {
-		name          string
-		msg           Message
-		wantToolUses  int
-		wantText      int
-		wantThinking  int
+		name         string
+		msg          Message
+		wantToolUses int
+		wantText     int
+		wantThinking int
 	}{
 		{
 			name: "mixed content blocks",
@@ -415,32 +415,32 @@ func TestExtractBlocks(t *testing.T) {
 			wantThinking: 0,
 		},
 		{
-			name:          "nil assistant message",
-			msg:           (*AssistantMessage)(nil),
-			wantToolUses:  0,
-			wantText:      0,
-			wantThinking:  0,
+			name:         "nil assistant message",
+			msg:          (*AssistantMessage)(nil),
+			wantToolUses: 0,
+			wantText:     0,
+			wantThinking: 0,
 		},
 		{
-			name:          "non-assistant message (user)",
-			msg:           &UserMessage{Content: "hello"},
-			wantToolUses:  0,
-			wantText:      0,
-			wantThinking:  0,
+			name:         "non-assistant message (user)",
+			msg:          &UserMessage{Content: "hello"},
+			wantToolUses: 0,
+			wantText:     0,
+			wantThinking: 0,
 		},
 		{
-			name:          "non-assistant message (system)",
-			msg:           &SystemMessage{Subtype: "init"},
-			wantToolUses:  0,
-			wantText:      0,
-			wantThinking:  0,
+			name:         "non-assistant message (system)",
+			msg:          &SystemMessage{Subtype: "init"},
+			wantToolUses: 0,
+			wantText:     0,
+			wantThinking: 0,
 		},
 		{
-			name:          "non-assistant message (result)",
-			msg:           &ResultMessage{Subtype: "success"},
-			wantToolUses:  0,
-			wantText:      0,
-			wantThinking:  0,
+			name:         "non-assistant message (result)",
+			msg:          &ResultMessage{Subtype: "success"},
+			wantToolUses: 0,
+			wantText:     0,
+			wantThinking: 0,
 		},
 	}
 

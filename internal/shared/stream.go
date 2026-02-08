@@ -15,7 +15,7 @@ type StreamIssue struct {
 
 // StreamStats collects statistics about stream processing.
 type StreamStats struct {
-	TotalMessages    int
+	TotalMessages   int
 	PartialMessages int
 	Errors          int
 	ProcessingTime  string // Duration in human-readable format

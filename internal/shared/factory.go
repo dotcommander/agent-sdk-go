@@ -23,8 +23,8 @@ func (f FactoryFunc[T, O]) New(opts ...func(*O)) (T, error) {
 // DefaultFactoryHolder holds a default factory instance with thread-safe access.
 // Use this to implement package-level default factories.
 type DefaultFactoryHolder[T any, O any] struct {
-	mu      sync.RWMutex
-	factory Factory[T, O]
+	mu       sync.RWMutex
+	factory  Factory[T, O]
 	fallback Factory[T, O]
 }
 

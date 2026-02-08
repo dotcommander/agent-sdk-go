@@ -264,10 +264,8 @@ func TestParserIncompleteJSON(t *testing.T) {
 
 	if userMsg, ok := msg.(*shared.UserMessage); !ok {
 		t.Fatalf("Expected *UserMessage, got %T", msg)
-	} else {
-		if userMsg.Content.(string) != "Hello" {
-			t.Errorf("Expected content 'Hello', got %v", userMsg.Content)
-		}
+	} else if userMsg.Content.(string) != "Hello" {
+		t.Errorf("Expected content 'Hello', got %v", userMsg.Content)
 	}
 }
 

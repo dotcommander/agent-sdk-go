@@ -318,7 +318,6 @@ func NewProtocolError(messageType, reason string) *shared.ProtocolError {
 	return shared.NewProtocolError(messageType, reason)
 }
 
-
 func ProcessError(pid int, command, reason, signal string) *shared.ProcessError {
 	return shared.NewProcessError(pid, command, reason, signal)
 }

@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-	"time"
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 )
 
 // SDKError is the base interface for all Claude Agent SDK errors.
@@ -562,7 +562,9 @@ func IsModelError(err error) bool { return IsErrorType[*ModelError](err) }
 // As*Error extraction helpers - use AsErrorType generic for wrapped error support
 
 // AsCLINotFoundError extracts a CLINotFoundError from the error chain.
-func AsCLINotFoundError(err error) (*CLINotFoundError, bool) { return AsErrorType[*CLINotFoundError](err) }
+func AsCLINotFoundError(err error) (*CLINotFoundError, bool) {
+	return AsErrorType[*CLINotFoundError](err)
+}
 
 // AsConnectionError extracts a ConnectionError from the error chain.
 func AsConnectionError(err error) (*ConnectionError, bool) { return AsErrorType[*ConnectionError](err) }
@@ -577,7 +579,9 @@ func AsParserError(err error) (*ParserError, bool) { return AsErrorType[*ParserE
 func AsProtocolError(err error) (*ProtocolError, bool) { return AsErrorType[*ProtocolError](err) }
 
 // AsConfigurationError extracts a ConfigurationError from the error chain.
-func AsConfigurationError(err error) (*ConfigurationError, bool) { return AsErrorType[*ConfigurationError](err) }
+func AsConfigurationError(err error) (*ConfigurationError, bool) {
+	return AsErrorType[*ConfigurationError](err)
+}
 
 // AsProcessError extracts a ProcessError from the error chain.
 func AsProcessError(err error) (*ProcessError, bool) { return AsErrorType[*ProcessError](err) }
@@ -598,7 +602,9 @@ func AsJSONDecodeError(err error) (*JSONDecodeError, bool) { return AsErrorType[
 func IsMessageParseError(err error) bool { return IsErrorType[*MessageParseError](err) }
 
 // AsMessageParseError extracts a MessageParseError from the error chain.
-func AsMessageParseError(err error) (*MessageParseError, bool) { return AsErrorType[*MessageParseError](err) }
+func AsMessageParseError(err error) (*MessageParseError, bool) {
+	return AsErrorType[*MessageParseError](err)
+}
 
 // CircuitBreaker interface defines the contract for a circuit breaker pattern.
 // This is a stub implementation that can be completed later.
@@ -654,8 +660,8 @@ type CircuitBreakerConfig struct {
 // DefaultCircuitBreakerConfig returns sensible defaults for the circuit breaker.
 func DefaultCircuitBreakerConfig() CircuitBreakerConfig {
 	return CircuitBreakerConfig{
-		FailureThreshold:     5,
-		RecoveryTimeout:      30 * time.Second,
+		FailureThreshold:    5,
+		RecoveryTimeout:     30 * time.Second,
 		HalfOpenMaxRequests: 3,
 	}
 }

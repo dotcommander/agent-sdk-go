@@ -29,7 +29,6 @@ func sessionAndPromptOption(baseFn shared.BaseOptionFunc) (SessionOption, Prompt
 		func(opts *PromptOptions) { baseFn(&opts.BaseOptions) }
 }
 
-
 // PromptOptions contains configuration for one-shot prompt operations.
 // This mirrors the options parameter in unstable_v2_prompt().
 // Embeds shared.BaseOptions for common fields (DRY).

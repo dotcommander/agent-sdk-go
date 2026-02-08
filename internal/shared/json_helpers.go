@@ -116,7 +116,7 @@ func MarshalWithType(v any, typeName string) ([]byte, error) {
 
 	// Unmarshal into a map to add the type field
 	var m map[string]json.RawMessage
-	if err := json.Unmarshal(data, &m); err != nil {
+	if err = json.Unmarshal(data, &m); err != nil {
 		return nil, err
 	}
 
@@ -147,7 +147,7 @@ func MarshalWithTypeAndSubtype(v any, typeName, subtype string) ([]byte, error) 
 
 	// Unmarshal into a map to add the type and subtype fields
 	var m map[string]json.RawMessage
-	if err := json.Unmarshal(data, &m); err != nil {
+	if err = json.Unmarshal(data, &m); err != nil {
 		return nil, err
 	}
 

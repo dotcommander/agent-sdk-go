@@ -59,10 +59,10 @@ const (
 
 // System message subtype constants
 const (
-	SystemSubtypeInit           = "init"
+	SystemSubtypeInit            = "init"
 	SystemSubtypeCompactBoundary = "compact_boundary"
-	SystemSubtypeStatus         = "status"
-	SystemSubtypeHookResponse   = "hook_response"
+	SystemSubtypeStatus          = "status"
+	SystemSubtypeHookResponse    = "hook_response"
 )
 
 // Content block type constants
@@ -243,14 +243,14 @@ type PluginInfo struct {
 // - Skills: list of active skills
 // - Plugins: list of active plugins
 type SystemMessage struct {
-	MessageType      string         `json:"type"`
-	Subtype          string         `json:"subtype"`
-	Data             map[string]any `json:"-"` // Preserve all original data
-	Agents           []string       `json:"-"` // Populated when subtype is "init"
-	Betas            []string       `json:"-"` // Populated when subtype is "init"
-	ClaudeCodeVersion string        `json:"-"` // Populated when subtype is "init"
-	Skills           []string       `json:"-"` // Populated when subtype is "init"
-	Plugins          []PluginInfo   `json:"-"` // Populated when subtype is "init"
+	MessageType       string         `json:"type"`
+	Subtype           string         `json:"subtype"`
+	Data              map[string]any `json:"-"` // Preserve all original data
+	Agents            []string       `json:"-"` // Populated when subtype is "init"
+	Betas             []string       `json:"-"` // Populated when subtype is "init"
+	ClaudeCodeVersion string         `json:"-"` // Populated when subtype is "init"
+	Skills            []string       `json:"-"` // Populated when subtype is "init"
+	Plugins           []PluginInfo   `json:"-"` // Populated when subtype is "init"
 }
 
 // Type returns the message type for SystemMessage.
@@ -275,20 +275,20 @@ func (m *SystemMessage) MarshalJSON() ([]byte, error) {
 // - "error_max_budget_usd": budget limit exceeded
 // - "error_max_structured_output_retries": structured output retry limit exceeded
 type ResultMessage struct {
-	MessageType       string                 `json:"type"`
-	Subtype           string                 `json:"subtype"`
-	DurationMs        int                    `json:"duration_ms"`
-	DurationAPIMs     int                    `json:"duration_api_ms"`
-	IsError           bool                   `json:"is_error"`
-	NumTurns          int                    `json:"num_turns"`
-	SessionID         string                 `json:"session_id"`
-	TotalCostUSD      *float64               `json:"total_cost_usd,omitempty"`
-	Usage             *map[string]any        `json:"usage,omitempty"`
-	Result            *string                `json:"result,omitempty"`
-	StructuredOutput  any                    `json:"structured_output,omitempty"`
-	ModelUsage        map[string]ModelUsage  `json:"modelUsage,omitempty"`
-	PermissionDenials []SDKPermissionDenial  `json:"permission_denials,omitempty"`
-	Errors            []string               `json:"errors,omitempty"` // for error subtypes
+	MessageType       string                `json:"type"`
+	Subtype           string                `json:"subtype"`
+	DurationMs        int                   `json:"duration_ms"`
+	DurationAPIMs     int                   `json:"duration_api_ms"`
+	IsError           bool                  `json:"is_error"`
+	NumTurns          int                   `json:"num_turns"`
+	SessionID         string                `json:"session_id"`
+	TotalCostUSD      *float64              `json:"total_cost_usd,omitempty"`
+	Usage             *map[string]any       `json:"usage,omitempty"`
+	Result            *string               `json:"result,omitempty"`
+	StructuredOutput  any                   `json:"structured_output,omitempty"`
+	ModelUsage        map[string]ModelUsage `json:"modelUsage,omitempty"`
+	PermissionDenials []SDKPermissionDenial `json:"permission_denials,omitempty"`
+	Errors            []string              `json:"errors,omitempty"` // for error subtypes
 }
 
 // Type returns the message type for ResultMessage.
@@ -520,15 +520,15 @@ func (m *AuthStatusMessage) MarshalJSON() ([]byte, error) {
 // HookResponseMessage represents hook execution response.
 // This is a system message with subtype "hook_response".
 type HookResponseMessage struct {
-	MessageType string  `json:"type"`      // always "system"
-	Subtype     string  `json:"subtype"`   // always "hook_response"
-	HookName    string  `json:"hook_name"`
-	HookEvent   string  `json:"hook_event"`
-	Stdout      string  `json:"stdout"`
-	Stderr      string  `json:"stderr"`
-	ExitCode    *int    `json:"exit_code,omitempty"`
-	UUID        string  `json:"uuid"`
-	SessionID   string  `json:"session_id"`
+	MessageType string `json:"type"`    // always "system"
+	Subtype     string `json:"subtype"` // always "hook_response"
+	HookName    string `json:"hook_name"`
+	HookEvent   string `json:"hook_event"`
+	Stdout      string `json:"stdout"`
+	Stderr      string `json:"stderr"`
+	ExitCode    *int   `json:"exit_code,omitempty"`
+	UUID        string `json:"uuid"`
+	SessionID   string `json:"session_id"`
 }
 
 // Type returns the message type for HookResponseMessage.
