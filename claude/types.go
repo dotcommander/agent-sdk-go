@@ -144,29 +144,18 @@ type Receiver interface {
 	ReceiveResponseIterator(ctx context.Context) MessageIterator
 }
 
-// Controller handles runtime configuration.
-type Controller interface {
+// Interrupter handles interrupt operations on the client.
+type Interrupter interface {
 	// Interrupt forcibly interrupts the current operation (process-level).
 	Interrupt() error
 
 	// InterruptGraceful sends interrupt via control protocol (if active).
 	InterruptGraceful(ctx context.Context) error
+}
 
-	// SetModel changes the AI model during a streaming session.
-	// Pass nil to reset to the default model.
-	// Only works when control protocol is active (connected streaming session).
-	SetModel(ctx context.Context, model *string) error
-
-	// SetPermissionMode changes the permission mode during a streaming session.
-	// Valid modes: "default", "acceptEdits", "plan", "bypassPermissions", "delegate", "dontAsk"
-	// Only works when control protocol is active.
-	SetPermissionMode(ctx context.Context, mode string) error
-
-	// RewindFiles reverts tracked files to their state at a specific user message.
-	// The messageUUID should be the UUID from a UserMessage received during the session.
-	// Requires EnableFileCheckpointing option.
-	RewindFiles(ctx context.Context, messageUUID string) error
-
+// StreamInspector provides read-only diagnostics about the message stream
+// and control protocol state.
+type StreamInspector interface {
 	// GetStreamIssues returns validation issues found in the message stream.
 	GetStreamIssues() []shared.StreamIssue
 
@@ -178,6 +167,19 @@ type Controller interface {
 
 	// IsProtocolActive returns whether the control protocol is active.
 	IsProtocolActive() bool
+}
+
+// ProtocolClient provides runtime mutation and query operations over the
+// control protocol. All methods require an active protocol connection.
+type ProtocolClient interface {
+	// SetModel changes the AI model during a streaming session.
+	SetModel(ctx context.Context, model *string) error
+
+	// SetPermissionMode changes the permission mode during a streaming session.
+	SetPermissionMode(ctx context.Context, mode string) error
+
+	// RewindFiles reverts tracked files to their state at a specific user message.
+	RewindFiles(ctx context.Context, messageUUID string) error
 
 	// McpServerStatus returns MCP server statuses.
 	McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error)
@@ -186,16 +188,22 @@ type Controller interface {
 	SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error)
 
 	// SupportedCommands returns the list of available slash commands.
-	// Requires an active control protocol connection.
 	SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error)
 
 	// SupportedModels returns the list of available models.
-	// Requires an active control protocol connection.
 	SupportedModels(ctx context.Context) ([]shared.ModelInfo, error)
 
 	// AccountInfo returns information about the current user's account.
-	// Requires an active control protocol connection.
 	AccountInfo(ctx context.Context) (*shared.AccountInfo, error)
+}
+
+// Controller handles runtime configuration.
+// It composes Interrupter, StreamInspector, and ProtocolClient for
+// backward compatibility.
+type Controller interface {
+	Interrupter
+	StreamInspector
+	ProtocolClient
 }
 
 // ContextManager handles context file operations.

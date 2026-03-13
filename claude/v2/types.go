@@ -25,18 +25,29 @@ type V2Session interface {
 	Interrupt(ctx context.Context) error
 }
 
-// V2Controller provides runtime configuration and diagnostic queries
-// for a V2 session.
-type V2Controller interface {
+// V2Mutator provides mutation operations for a V2 session.
+type V2Mutator interface {
 	SetPermissionMode(ctx context.Context, mode shared.PermissionMode) error
 	SetModel(ctx context.Context, model string) error
 	SetMaxThinkingTokens(ctx context.Context, tokens *int) error
+	RewindFiles(ctx context.Context, userMessageID string, opts *RewindFilesOptions) (*shared.RewindFilesResult, error)
+	SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error)
+}
+
+// V2Inspector provides read-only query operations for a V2 session.
+type V2Inspector interface {
 	SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error)
 	SupportedModels(ctx context.Context) ([]shared.ModelInfo, error)
 	McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error)
 	AccountInfo(ctx context.Context) (*shared.AccountInfo, error)
-	RewindFiles(ctx context.Context, userMessageID string, opts *RewindFilesOptions) (*shared.RewindFilesResult, error)
-	SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error)
+}
+
+// V2Controller provides runtime configuration and diagnostic queries
+// for a V2 session. It composes V2Mutator and V2Inspector for backward
+// compatibility.
+type V2Controller interface {
+	V2Mutator
+	V2Inspector
 }
 
 // V2FullSession combines core session operations with runtime
