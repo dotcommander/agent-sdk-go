@@ -8,14 +8,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"math"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -35,142 +31,24 @@ const (
 	defaultTimeout = 60 * time.Second
 	// channelBufferSize is the buffer size for message and error channels.
 	channelBufferSize = 100
-	// maxRetries is the maximum number of retry attempts for transient failures.
-	maxRetries = 3
-	// baseDelay is the base delay for exponential backoff (100ms).
-	baseDelay = 100 * time.Millisecond
 )
-
-// withRetry executes a function with exponential backoff retry logic.
-// Retries transient failures (connection errors, timeouts, process errors).
-func withRetry(ctx context.Context, operation string, fn func() error) error {
-	var lastErr error
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		err := fn()
-		if err == nil {
-			return nil // Success
-		}
-
-		// Check if error is retryable
-		if !isRetryableError(err) {
-			return fmt.Errorf("%s: non-retryable error: %w", operation, err)
-		}
-
-		lastErr = fmt.Errorf("%s (attempt %d/%d): %w", operation, attempt+1, maxRetries, err)
-
-		// Calculate delay with exponential backoff and jitter
-		if attempt < maxRetries-1 {
-			delay := calculateDelay(attempt)
-			select {
-			case <-time.After(delay):
-				continue
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-	}
-
-	return fmt.Errorf("%s failed after %d attempts: %w", operation, maxRetries, lastErr)
-}
-
-// isRetryableError determines if an error should be retried.
-func isRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	// Check specific error types that are retryable
-	if shared.IsConnectionError(err) {
-		return true
-	}
-
-	if shared.IsTimeoutError(err) {
-		return true
-	}
-
-	// Check for process-related errors
-	if _, ok := err.(*shared.ProcessError); ok {
-		return true
-	}
-
-	// Check for transient I/O errors
-	if strings.Contains(err.Error(), "resource temporarily unavailable") ||
-		strings.Contains(err.Error(), "connection refused") ||
-		strings.Contains(err.Error(), "broken pipe") ||
-		strings.Contains(err.Error(), "timeout") ||
-		strings.Contains(err.Error(), "EOF") {
-		return true
-	}
-
-	return false
-}
-
-// calculateDelay calculates the delay with exponential backoff and jitter.
-func calculateDelay(attempt int) time.Duration {
-	// Exponential backoff: baseDelay * 2^attempt
-	delay := float64(baseDelay) * math.Pow(2, float64(attempt))
-
-	// Add jitter (random factor between 0.5x and 1.5x)
-	jitter := 0.5 + rand.Float64()*1.0
-	delay *= jitter
-
-	// Cap at 5 seconds to avoid excessive delays
-	cappedDelay := time.Duration(delay)
-	if cappedDelay > 5*time.Second {
-		cappedDelay = 5 * time.Second
-	}
-
-	return cappedDelay
-}
-
-// isValidEnvVar checks if an environment variable key-value pair is safe to use.
-func isValidEnvVar(k, v string) bool {
-	// Key must be valid shell identifier
-	keyValid := regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`).MatchString(k)
-	// Value must not contain dangerous characters
-	valueValid := !strings.ContainsAny(v, "\n\r\x00")
-	return keyValid && valueValid
-}
-
-// isValidPrompt checks if a prompt string is safe to use as a CLI argument.
-// Note: exec.Command properly escapes arguments, so most characters are safe.
-// We only block null bytes which could cause issues.
-func isValidPrompt(prompt string) bool {
-	// Only block null bytes - exec.Command handles escaping properly
-	return !strings.ContainsAny(prompt, "\x00")
-}
 
 // Transport represents a subprocess transport for communicating with Claude CLI.
 type Transport struct {
-	// Process management
-	cmd        *exec.Cmd
-	cliPath    string
-	cliCommand string
-	promptArg  *string // nil = interactive mode, set = one-shot mode
+	// Process management (embedded)
+	ProcessManager
+
+	promptArg *string // nil = interactive mode, set = one-shot mode
 
 	// Connection state
 	connected bool
 	mu        sync.RWMutex
-
-	// I/O streams
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-	stderr io.ReadCloser
 
 	// Configuration
 	timeout        time.Duration
 	model          string
 	systemPrompt   string
 	customArgs     []string
-	env            map[string]string
-	cwd            string
 	tools          *shared.ToolsConfig
 	stderrCallback func(line string)
 	canUseTool     shared.CanUseToolCallback
@@ -269,14 +147,16 @@ func createTransport(config *TransportConfig, promptArg *string) (*Transport, er
 	}
 
 	return &Transport{
-		cliPath:               config.CLIPath,
-		cliCommand:            config.CLICommand,
+		ProcessManager: ProcessManager{
+			cliPath:    config.CLIPath,
+			cliCommand: config.CLICommand,
+			cwd:        config.Cwd,
+			env:        config.Env,
+		},
 		model:                 config.Model,
 		timeout:               config.Timeout,
 		systemPrompt:          config.SystemPrompt,
 		customArgs:            config.CustomArgs,
-		env:                   config.Env,
-		cwd:                   config.Cwd,
 		tools:                 config.Tools,
 		stderrCallback:        config.StderrCallback,
 		canUseTool:            config.CanUseTool,
@@ -439,22 +319,6 @@ func (t *Transport) Connect(ctx context.Context) error {
 // This is a thin wrapper around BuildArgs for backwards compatibility.
 func (t *Transport) buildArgs() []string {
 	return BuildArgs(t.model, t.systemPrompt, t.customArgs, t.tools, t.mcpServers, t.promptArg)
-}
-
-// buildEnv builds the environment variables for the subprocess.
-func (t *Transport) buildEnv() []string {
-	env := os.Environ()
-
-	// Add custom environment variables with validation
-	for k, v := range t.env {
-		if isValidEnvVar(k, v) {
-			env = append(env, fmt.Sprintf("%s=%s", k, v))
-		} else if debugEnabled {
-			log.Printf("claude-sdk: skipping invalid env var %q", k)
-		}
-	}
-
-	return env
 }
 
 // handleStdout reads and parses messages from stdout.

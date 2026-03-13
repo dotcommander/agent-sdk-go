@@ -210,9 +210,7 @@ func TestTransport_IsConnected(t *testing.T) {
 
 // TestTransport_GetPID tests the GetPID method.
 func TestTransport_GetPID(t *testing.T) {
-	transport := &Transport{
-		cmd: nil,
-	}
+	transport := &Transport{}
 
 	assert.Equal(t, 0, transport.GetPID())
 
