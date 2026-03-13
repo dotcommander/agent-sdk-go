@@ -258,7 +258,7 @@ func (s *SdkMcpServer) convertSchema(schema any) map[string]any {
 
 	// If it's a struct type, use reflection
 	if reflect.TypeOf(schema).Kind() == reflect.Struct {
-		return s.structToSchema(reflect.TypeOf(schema))
+		return generateSchema(reflect.TypeOf(schema))
 	}
 
 	// Default: empty object
@@ -283,70 +283,6 @@ func (s *SdkMcpServer) convertTypeToSchema(typeVal any) map[string]any {
 		return map[string]any{"type": "integer"}
 	case "boolean", "bool":
 		return map[string]any{"type": "boolean"}
-	default:
-		return map[string]any{"type": "string"}
-	}
-}
-
-func (s *SdkMcpServer) structToSchema(t reflect.Type) map[string]any {
-	properties := make(map[string]any)
-	required := make([]string, 0)
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "" {
-			jsonTag = field.Name
-		}
-
-		// Parse json tag
-		name := jsonTag
-		for idx := 0; idx < len(jsonTag); idx++ {
-			if jsonTag[idx] == ',' {
-				name = jsonTag[:idx]
-				break
-			}
-		}
-
-		// Skip if "-"
-		if name == "-" {
-			continue
-		}
-
-		properties[name] = s.typeToSchema(field.Type)
-
-		// Check if required (not a pointer)
-		if field.Type.Kind() != reflect.Ptr {
-			required = append(required, name)
-		}
-	}
-
-	return map[string]any{
-		"type":       "object",
-		"properties": properties,
-		"required":   required,
-	}
-}
-
-func (s *SdkMcpServer) typeToSchema(t reflect.Type) map[string]any {
-	switch t.Kind() {
-	case reflect.String:
-		return map[string]any{"type": "string"}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return map[string]any{"type": "integer"}
-	case reflect.Float32, reflect.Float64:
-		return map[string]any{"type": "number"}
-	case reflect.Bool:
-		return map[string]any{"type": "boolean"}
-	case reflect.Ptr:
-		return s.typeToSchema(t.Elem())
-	case reflect.Struct:
-		return s.structToSchema(t)
-	case reflect.Slice, reflect.Array:
-		return map[string]any{
-			"type":  "array",
-			"items": s.typeToSchema(t.Elem()),
-		}
 	default:
 		return map[string]any{"type": "string"}
 	}
