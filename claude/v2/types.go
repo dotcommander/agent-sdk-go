@@ -14,56 +14,36 @@ type V2Message interface {
 	Type() string
 }
 
-// V2Session represents a V2 session with send/receive pattern.
-// This mirrors the TypeScript SDK V2 Session interface.
+// V2Session represents core session operations: sending messages,
+// receiving responses, and managing session lifecycle.
 type V2Session interface {
-	// Send sends a message to Claude in this session.
 	Send(ctx context.Context, message string) error
-
-	// Receive returns a channel of V2Message responses.
-	// The channel closes when the response is complete.
 	Receive(ctx context.Context) <-chan V2Message
-
-	// ReceiveIterator returns an iterator for receiving messages.
-	// This provides an alternative to the channel-based Receive().
 	ReceiveIterator(ctx context.Context) V2MessageIterator
-
-	// Close closes the session and releases resources.
 	Close() error
-
-	// SessionID returns the unique session identifier.
 	SessionID() string
-
-	// Interrupt stops the current query execution.
 	Interrupt(ctx context.Context) error
+}
 
-	// SetPermissionMode changes the permission mode.
+// V2Controller provides runtime configuration and diagnostic queries
+// for a V2 session.
+type V2Controller interface {
 	SetPermissionMode(ctx context.Context, mode shared.PermissionMode) error
-
-	// SetModel changes the model used.
 	SetModel(ctx context.Context, model string) error
-
-	// SetMaxThinkingTokens adjusts the thinking token limit.
-	// Pass nil to clear the limit.
 	SetMaxThinkingTokens(ctx context.Context, tokens *int) error
-
-	// SupportedCommands returns available slash commands.
 	SupportedCommands(ctx context.Context) ([]shared.SlashCommand, error)
-
-	// SupportedModels returns available models.
 	SupportedModels(ctx context.Context) ([]shared.ModelInfo, error)
-
-	// McpServerStatus returns MCP server statuses.
 	McpServerStatus(ctx context.Context) ([]shared.McpServerStatus, error)
-
-	// AccountInfo returns account information.
 	AccountInfo(ctx context.Context) (*shared.AccountInfo, error)
-
-	// RewindFiles rewinds files to a specific message state.
 	RewindFiles(ctx context.Context, userMessageID string, opts *RewindFilesOptions) (*shared.RewindFilesResult, error)
-
-	// SetMcpServers dynamically sets MCP servers.
 	SetMcpServers(ctx context.Context, servers map[string]shared.McpServerConfig) (*shared.McpSetServersResult, error)
+}
+
+// V2FullSession combines core session operations with runtime
+// configuration and diagnostics.
+type V2FullSession interface {
+	V2Session
+	V2Controller
 }
 
 // RewindFilesOptions contains options for RewindFiles operation.

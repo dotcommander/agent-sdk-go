@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dotcommander/agent-sdk-go/claude"
-	"github.com/dotcommander/agent-sdk-go/claude/cli"
 	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
@@ -31,28 +30,9 @@ func newSession(ctx context.Context, cfg sessionConfig, opts ...SessionOption) (
 		return nil, fmt.Errorf("invalid options: %w", err)
 	}
 
-	// Check if Claude CLI is available (using injected checker for testability)
-	cliChecker := options.cliChecker
-	if cliChecker == nil {
-		cliChecker = shared.CLICheckerFunc(cli.IsCLIAvailable)
-	}
-	if !cliChecker.IsCLIAvailable() {
-		return nil, fmt.Errorf("claude CLI not found. Please install it first")
-	}
-
-	// Get the client factory (DIP: depend on abstraction, not concrete NewClient)
-	factory := options.clientFactory
-	if factory == nil {
-		factory = DefaultClientFactory()
-	}
-
-	// Create the underlying client using the factory
-	client, err := factory.NewClient(
-		claude.WithModel(options.Model),
-		claude.WithTimeout(options.Timeout.String()),
-	)
+	client, err := buildClient(options.Model, options.Timeout, options.cliChecker, options.clientFactory)
 	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
+		return nil, err
 	}
 
 	// Determine session ID
@@ -131,7 +111,7 @@ func ResumeSession(ctx context.Context, sessionID string, opts ...SessionOption)
 	return newSession(ctx, sessionConfig{sessionID: sessionID, resumed: true}, opts...)
 }
 
-// v2SessionImpl implements the V2Session interface.
+// v2SessionImpl implements the V2FullSession interface.
 type v2SessionImpl struct {
 	client      claude.Client
 	options     *V2SessionOptions
@@ -141,6 +121,8 @@ type v2SessionImpl struct {
 	pendingSend *pendingSendData
 	resumed     bool
 }
+
+var _ V2FullSession = (*v2SessionImpl)(nil)
 
 // pendingSendData holds data from a Send operation that will be consumed by Receive.
 type pendingSendData struct {

@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/dotcommander/agent-sdk-go/claude"
-	"github.com/dotcommander/agent-sdk-go/claude/cli"
-	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
 
 // Prompt sends a one-shot prompt to Claude and returns the result.
@@ -39,28 +35,9 @@ func Prompt(ctx context.Context, prompt string, opts ...PromptOption) (*V2Result
 		return nil, fmt.Errorf("invalid options: %w", err)
 	}
 
-	// Check if Claude CLI is available (using injected checker for testability)
-	cliChecker := options.cliChecker
-	if cliChecker == nil {
-		cliChecker = shared.CLICheckerFunc(cli.IsCLIAvailable)
-	}
-	if !cliChecker.IsCLIAvailable() {
-		return nil, fmt.Errorf("claude CLI not found. Please install it first")
-	}
-
-	// Get the client factory (DIP: depend on abstraction, not concrete NewClient)
-	factory := options.clientFactory
-	if factory == nil {
-		factory = DefaultClientFactory()
-	}
-
-	// Create a temporary client using the factory
-	client, err := factory.NewClient(
-		claude.WithModel(options.Model),
-		claude.WithTimeout(options.Timeout.String()),
-	)
+	client, err := buildClient(options.Model, options.Timeout, options.cliChecker, options.clientFactory)
 	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
+		return nil, err
 	}
 
 	// Connect to Claude CLI
