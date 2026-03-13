@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/dotcommander/agent-sdk-go/internal/shared"
 )
@@ -23,13 +25,32 @@ func DefaultClientOptions() *ClientOptions {
 	}
 }
 
+var validPermissionModes = []string{"auto", "read", "write", "restricted"}
+
 // Validate validates the options and returns an error if invalid.
 // Performs comprehensive validation including conflict detection.
 func (o *ClientOptions) Validate() error {
-	// Delegate core validation to shared
-	sharedOpts := o.toSharedOptions()
-	if err := sharedOpts.Validate(); err != nil {
-		return err
+	// Validate model
+	if o.Model == "" {
+		return shared.NewConfigurationError("Model", "", "model is required")
+	}
+	o.Model = shared.ResolveModelName(o.Model)
+
+	if !slices.Contains(validPermissionModes, o.PermissionMode) {
+		return shared.NewConfigurationError("PermissionMode", o.PermissionMode,
+			fmt.Sprintf("invalid permission mode, must be one of: %v", validPermissionModes))
+	}
+
+	// Validate timeout format
+	if o.Timeout != "" {
+		if _, err := time.ParseDuration(o.Timeout); err != nil {
+			return shared.NewConfigurationError("Timeout", o.Timeout, "timeout must be a valid duration like '30s', '5m', '1h'")
+		}
+	}
+
+	// Validate context files - reject empty paths
+	if slices.Contains(o.ContextFiles, "") {
+		return shared.NewConfigurationError("ContextFiles", "", "context file path cannot be empty")
 	}
 
 	// Validate OutputFormat if set
@@ -110,27 +131,6 @@ func splitTools(s string) []string {
 		}
 	}
 	return result
-}
-
-// toSharedOptions converts ClientOptions to shared.Options for validation.
-func (o *ClientOptions) toSharedOptions() *shared.Options {
-	return &shared.Options{
-		Model:                  o.Model,
-		CLIPath:                o.CLIPath,
-		CLICommand:             o.CLICommand,
-		PermissionMode:         o.PermissionMode,
-		ContextFiles:           o.ContextFiles,
-		IncludePartialMessages: o.IncludePartialMessages,
-		EnableStructuredOutput: o.EnableStructuredOutput,
-		Timeout:                o.Timeout,
-		CustomArgs:             o.CustomArgs,
-		Env:                    o.Env,
-		MaxMessages:            o.MaxMessages,
-		BufferSize:             o.BufferSize,
-		Trace:                  o.Trace,
-		DisableCache:           o.DisableCache,
-		CacheTTL:               o.CacheTTL,
-	}
 }
 
 // WithModel sets the model option.

@@ -46,16 +46,22 @@ func TestAssistantMessageErrorConstants(t *testing.T) {
 	}
 }
 
-func TestDefaultOptions(t *testing.T) {
-	opts := DefaultOptions()
-
-	if opts.Model == "" {
-		t.Error("Default model should not be empty")
-	}
-	if opts.Timeout == "" {
+func TestDefaultFocusedOptions(t *testing.T) {
+	conn := DefaultConnectionOptions()
+	if conn.Timeout == "" {
 		t.Error("Default timeout should not be empty")
 	}
-	if opts.BufferSize <= 0 {
+	if conn.CLICommand == "" {
+		t.Error("Default CLI command should not be empty")
+	}
+
+	buf := DefaultBufferOptions()
+	if buf.BufferSize <= 0 {
 		t.Error("Default buffer size should be positive")
+	}
+
+	model := DefaultModelOptions()
+	if model.Model == "" {
+		t.Error("Default model should not be empty")
 	}
 }
